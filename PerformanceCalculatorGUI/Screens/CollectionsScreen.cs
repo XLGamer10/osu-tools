@@ -85,6 +85,9 @@ namespace PerformanceCalculatorGUI.Screens
         private readonly Dictionary<DifficultyTuningParameter<OsuDifficultyConstants>, BindableBool> autobalanceParameterStates
             = new Dictionary<DifficultyTuningParameter<OsuDifficultyConstants>, BindableBool>();
         private bool autobalanceRunning;
+        private LimitedLabelledNumberBox saIterationsBox = null!;
+        private LimitedLabelledNumberBox saRestartsBox = null!;
+        private LimitedLabelledNumberBox saSeedBox = null!;
         private AutobalanceRunner autobalanceRunner = null!;
 
         private VerboseLoadingLayer loadingLayer = null!;
@@ -296,8 +299,49 @@ namespace PerformanceCalculatorGUI.Screens
                             {
                                 RelativeSizeAxes = Axes.X,
                                 AutoSizeAxes = Axes.Y,
+                                Direction = FillDirection.Vertical,
+                                Spacing = new Vector2(0, 4),
+                            },
+                            new OsuSpriteText
+                            {
+                                Text = "SA Settings",
+                                Font = OsuFont.GetFont(size: 12, weight: FontWeight.SemiBold),
+                                Colour = colourProvider.Light2,
+                                Margin = new MarginPadding { Top = 6 }
+                            },
+                            new FillFlowContainer
+                            {
+                                RelativeSizeAxes = Axes.X,
+                                AutoSizeAxes = Axes.Y,
                                 Direction = FillDirection.Full,
                                 Spacing = new Vector2(10, 6),
+                                Children = new Drawable[]
+                                {
+                                    saIterationsBox = new LimitedLabelledNumberBox
+                                    {
+                                        Width = 160,
+                                        Label = "Iterations",
+                                        PlaceholderText = "5000",
+                                        MinValue = 100,
+                                        MaxValue = 100000,
+                                    },
+                                    saRestartsBox = new LimitedLabelledNumberBox
+                                    {
+                                        Width = 140,
+                                        Label = "Restarts",
+                                        PlaceholderText = "1",
+                                        MinValue = 1,
+                                        MaxValue = 20,
+                                    },
+                                    saSeedBox = new LimitedLabelledNumberBox
+                                    {
+                                        Width = 140,
+                                        Label = "Seed",
+                                        PlaceholderText = "42",
+                                        MinValue = 0,
+                                        MaxValue = 999999,
+                                    },
+                                }
                             },
                             new FillFlowContainer
                             {
@@ -596,12 +640,28 @@ namespace PerformanceCalculatorGUI.Screens
 
             foreach (var section in OsuDifficultyTuningParameters.Sections)
             {
+                autobalanceParametersContainer.Add(new OsuSpriteText
+                {
+                    Text = section.Title,
+                    Font = OsuFont.GetFont(size: 11, weight: FontWeight.SemiBold),
+                    Colour = colourProvider.Light1,
+                    Margin = new MarginPadding { Top = 4 }
+                });
+
+                var sectionFlow = new FillFlowContainer
+                {
+                    RelativeSizeAxes = Axes.X,
+                    AutoSizeAxes = Axes.Y,
+                    Direction = FillDirection.Full,
+                    Spacing = new Vector2(10, 4),
+                };
+
                 foreach (var parameter in section.Parameters)
                 {
                     var bindable = new BindableBool { Value = parameter.DefaultEnabled };
                     autobalanceParameterStates[parameter] = bindable;
 
-                    autobalanceParametersContainer.Add(new Container
+                    sectionFlow.Add(new Container
                     {
                         Width = 230,
                         AutoSizeAxes = Axes.Y,
@@ -615,6 +675,8 @@ namespace PerformanceCalculatorGUI.Screens
                         }
                     });
                 }
+
+                autobalanceParametersContainer.Add(sectionFlow);
             }
         }
 
@@ -645,7 +707,14 @@ namespace PerformanceCalculatorGUI.Screens
             var collection = currentCollection.Value;
             var target = autobalanceTarget.Value;
 
-            autobalanceRunner.RunOsuAsync(collection, target, selectedParameters, tuningManager.Current.Value, progress: onAutobalanceProgress)
+            var saConfig = new SAConfig
+            {
+                Iterations = saIterationsBox.Value.Value > 0 ? saIterationsBox.Value.Value : 5000,
+                Restarts = saRestartsBox.Value.Value > 0 ? saRestartsBox.Value.Value : 1,
+                Seed = saSeedBox.Value.Value > 0 ? saSeedBox.Value.Value : 42,
+            };
+
+            autobalanceRunner.RunOsuAsync(collection, target, selectedParameters, tuningManager.Current.Value, config: saConfig, progress: onAutobalanceProgress)
                              .ContinueWith(handleAutobalanceResult, TaskContinuationOptions.None);
         }
 
