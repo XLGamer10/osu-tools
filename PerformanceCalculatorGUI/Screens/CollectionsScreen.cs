@@ -504,7 +504,8 @@ namespace PerformanceCalculatorGUI.Screens
                         var scoreContainer = new ScoreContainer(
                             new ExtendedScore(score, difficultyAttributes, perfAttributes),
                             currentCollection.Value!.ExpectedPerformance,
-                            persistCurrentCollection);
+                            persistCurrentCollection,
+                            autobalanceTarget);
                         scoreContainer.OnDelete += onScoreRemove;
 
                         scoresList.Add(scoreContainer);

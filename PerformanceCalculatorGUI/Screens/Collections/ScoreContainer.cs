@@ -6,6 +6,7 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
 using osu.Framework.Allocation;
+using osu.Framework.Bindables;
 using osu.Framework.Graphics;
 using osu.Framework.Graphics.Containers;
 using osu.Framework.Graphics.Sprites;
@@ -21,6 +22,7 @@ using osuTK;
 using osuTK.Graphics;
 using PerformanceCalculatorGUI.Components;
 using PerformanceCalculatorGUI.Components.TextBoxes;
+using PerformanceCalculatorGUI.Screens.Collections.Autobalance;
 
 namespace PerformanceCalculatorGUI.Screens.Collections
 {
@@ -33,12 +35,15 @@ namespace PerformanceCalculatorGUI.Screens.Collections
         private readonly IDictionary<string, ExpectedPerformanceValues> expectedValuesByKey;
         private readonly Action onExpectedValuesChanged;
         private readonly string expectedValuesKey;
+        private readonly Bindable<AutobalanceTarget> autobalanceTarget;
 
         private ExpectedPerformanceValues? expectedValues;
+        private Dictionary<string, double> numericAttributes = new Dictionary<string, double>();
 
         private FillFlowContainer expectedValuesContainer = null!;
         private FillFlowContainer expectedValuesRows = null!;
         private OsuSpriteText expectedValuesToggleText = null!;
+        private OsuSpriteText expectedValuesSummaryText = null!;
         private ScheduledDelegate? debouncedExpectedSave;
 
         private const float expected_row_height = 35;
@@ -53,7 +58,8 @@ namespace PerformanceCalculatorGUI.Screens.Collections
 
         public event OnDeleteHandler? OnDelete;
 
-        public ScoreContainer(ExtendedScore score, IDictionary<string, ExpectedPerformanceValues> expectedValuesByKey, Action onExpectedValuesChanged)
+        public ScoreContainer(ExtendedScore score, IDictionary<string, ExpectedPerformanceValues> expectedValuesByKey, Action onExpectedValuesChanged,
+                              Bindable<AutobalanceTarget> autobalanceTarget)
         {
             RelativeSizeAxes = Axes.X;
             AutoSizeAxes = Axes.Y;
@@ -61,6 +67,7 @@ namespace PerformanceCalculatorGUI.Screens.Collections
             Score = score;
             this.expectedValuesByKey = expectedValuesByKey;
             this.onExpectedValuesChanged = onExpectedValuesChanged;
+            this.autobalanceTarget = autobalanceTarget;
             expectedValuesKey = score.SoloScore.ID.ToString()!;
             expectedValuesByKey.TryGetValue(expectedValuesKey!, out expectedValues);
 
@@ -112,6 +119,7 @@ namespace PerformanceCalculatorGUI.Screens.Collections
         private void load()
         {
             populateExpectedValues();
+            autobalanceTarget.BindValueChanged(_ => updateHeaderSummary(), true);
         }
 
         protected override bool OnHover(HoverEvent e)
@@ -138,7 +146,7 @@ namespace PerformanceCalculatorGUI.Screens.Collections
             expectedValuesContainer.Clear();
 
             var attributes = AttributeConversion.ToDictionary(Score.PerformanceAttributes);
-            var numericAttributes = new Dictionary<string, double>();
+            numericAttributes = new Dictionary<string, double>();
 
             foreach (var attribute in attributes)
             {
@@ -214,6 +222,12 @@ namespace PerformanceCalculatorGUI.Screens.Collections
                 Width = 12
             };
 
+            expectedValuesSummaryText = new OsuSpriteText
+            {
+                Font = OsuFont.GetFont(size: 12, weight: FontWeight.SemiBold),
+                Colour = colourProvider.Light2
+            };
+
             return new ExpectedValuesHeader(toggleExpectedValues)
             {
                 Child = new FillFlowContainer
@@ -229,7 +243,8 @@ namespace PerformanceCalculatorGUI.Screens.Collections
                             Text = "Expected values",
                             Font = OsuFont.GetFont(size: 12, weight: FontWeight.SemiBold),
                             Colour = colourProvider.Light2
-                        }
+                        },
+                        expectedValuesSummaryText
                     }
                 }
             };
@@ -256,6 +271,43 @@ namespace PerformanceCalculatorGUI.Screens.Collections
                 expectedValuesRows.Hide();
                 expectedValuesToggleText.Text = ">";
             }
+        }
+
+        private void updateHeaderSummary()
+        {
+            if (expectedValuesSummaryText == null)
+                return;
+
+            var target = autobalanceTarget.Value;
+
+            if (expectedValues == null || !AutobalanceDataset.TryGetExpectedValue(expectedValues, target, out double expectedValue))
+            {
+                expectedValuesSummaryText.Text = string.Empty;
+                expectedValuesSummaryText.Colour = colourProvider.Light2;
+                return;
+            }
+
+            // Find the actual value for this target
+            string targetKey = target switch
+            {
+                AutobalanceTarget.Total => "total",
+                AutobalanceTarget.Aim => "aim",
+                AutobalanceTarget.Speed => "speed",
+                AutobalanceTarget.Accuracy => "accuracy",
+                AutobalanceTarget.Reading => "reading",
+                AutobalanceTarget.Flashlight => "flashlight",
+                _ => "total"
+            };
+
+            if (!numericAttributes.TryGetValue(targetKey, out double actualValue))
+            {
+                expectedValuesSummaryText.Text = string.Empty;
+                return;
+            }
+
+            double difference = actualValue - expectedValue;
+            expectedValuesSummaryText.Text = "(" + difference.ToString("+0.##;-0.##;0", CultureInfo.CurrentCulture) + "pp)";
+            expectedValuesSummaryText.Colour = getDifferenceColour(difference);
         }
 
         private Drawable createExpectedRow(string label, double actualValue, double? expectedValue, Action<double?> onExpectedChanged)
@@ -437,7 +489,11 @@ namespace PerformanceCalculatorGUI.Screens.Collections
         private void scheduleExpectedSave()
         {
             debouncedExpectedSave?.Cancel();
-            debouncedExpectedSave = Scheduler.AddDelayed(onExpectedValuesChanged, 250);
+            debouncedExpectedSave = Scheduler.AddDelayed(() =>
+            {
+                onExpectedValuesChanged();
+                updateHeaderSummary();
+            }, 250);
         }
 
         private Color4 getDifferenceColour(double difference)
