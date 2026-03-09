@@ -21,6 +21,7 @@ using osu.Game.Rulesets.Osu.Difficulty;
 using osu.Game.Rulesets.Osu.Difficulty.Evaluators;
 using osu.Game.Rulesets.Osu.Difficulty.Evaluators.Aim;
 using osu.Game.Rulesets.Osu.Difficulty.Evaluators.Speed;
+using PerformanceCalculatorGUI.Configuration;
 using osu.Game.Rulesets.Osu.Difficulty.Preprocessing;
 using osu.Game.Rulesets.Osu.Objects;
 using osu.Game.Rulesets.Taiko.Difficulty.Evaluators;
@@ -37,6 +38,9 @@ namespace PerformanceCalculatorGUI.Screens.ObjectInspection
 
         [Resolved]
         private Track track { get; set; } = null!;
+
+        [Resolved]
+        private DifficultyTuningManager<OsuDifficultyConstants> tuningManager { get; set; } = null!;
 
         private SpriteText hitObjectTypeText = null!;
 
