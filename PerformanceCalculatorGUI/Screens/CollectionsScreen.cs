@@ -1,8 +1,9 @@
-﻿// Copyright (c) ppy Pty Ltd <contact@ppy.sh>. Licensed under the MIT Licence.
+// Copyright (c) ppy Pty Ltd <contact@ppy.sh>. Licensed under the MIT Licence.
 // See the LICENCE file in the repository root for full licence text.
 
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Security.Cryptography;
@@ -17,17 +18,24 @@ using osu.Framework.Graphics.Containers;
 using osu.Framework.Graphics.Shapes;
 using osu.Framework.Graphics.Sprites;
 using osu.Framework.Logging;
+using osu.Framework.Threading;
+using osu.Game.Graphics;
 using osu.Game.Graphics.Containers;
 using osu.Game.Graphics.Sprites;
+using osu.Game.Graphics.UserInterfaceV2;
 using osu.Game.Localisation;
 using osu.Game.Overlays;
 using osu.Game.Overlays.Dialog;
 using osu.Game.Rulesets;
+using osu.Game.Rulesets.Difficulty;
 using osu.Game.Rulesets.Mods;
+using osu.Game.Rulesets.Osu.Difficulty;
 using osuTK;
 using PerformanceCalculatorGUI.Components;
+using PerformanceCalculatorGUI.Components.TextBoxes;
 using PerformanceCalculatorGUI.Configuration;
 using PerformanceCalculatorGUI.Screens.Collections;
+using PerformanceCalculatorGUI.Screens.Collections.Autobalance;
 
 namespace PerformanceCalculatorGUI.Screens
 {
@@ -53,6 +61,9 @@ namespace PerformanceCalculatorGUI.Screens
         [Resolved]
         private NotificationDisplay notificationDisplay { get; set; } = null!;
 
+        [Resolved]
+        private DifficultyTuningManager<OsuDifficultyConstants> tuningManager { get; set; } = null!;
+
         private FillFlowContainer collectionList = null!;
         private CreateCollectionButton createCollectionButton = null!;
 
@@ -61,6 +72,20 @@ namespace PerformanceCalculatorGUI.Screens
         private FillFlowContainer<ScoreContainer> scoresList = null!;
         private AddScoreButton addScoreButton = null!;
         private readonly Bindable<CollectionSortCriteria> sorting = new Bindable<CollectionSortCriteria>(CollectionSortCriteria.None);
+
+        private FillFlowContainer autobalanceParametersContainer = null!;
+        private OsuSpriteText autobalanceStatusText = null!;
+        private RoundedButton autobalanceRunButton = null!;
+        private Box autobalanceProgressFill = null!;
+        private OsuSpriteText autobalanceTimeText = null!;
+        private string autobalanceStage = "Ready";
+        private readonly Stopwatch autobalanceStopwatch = new Stopwatch();
+        private ScheduledDelegate? autobalanceElapsedUpdate;
+        private readonly Bindable<AutobalanceTarget> autobalanceTarget = new Bindable<AutobalanceTarget>(AutobalanceTarget.Total);
+        private readonly Dictionary<DifficultyTuningParameter<OsuDifficultyConstants>, BindableBool> autobalanceParameterStates
+            = new Dictionary<DifficultyTuningParameter<OsuDifficultyConstants>, BindableBool>();
+        private bool autobalanceRunning;
+        private AutobalanceRunner autobalanceRunner = null!;
 
         private VerboseLoadingLayer loadingLayer = null!;
 
@@ -177,6 +202,7 @@ namespace PerformanceCalculatorGUI.Screens
                                                         }
                                                     }
                                                 },
+                                                createAutobalanceContainer(),
                                                 scoresList = new FillFlowContainer<ScoreContainer>
                                                 {
                                                     RelativeSizeAxes = Axes.X,
@@ -202,11 +228,139 @@ namespace PerformanceCalculatorGUI.Screens
             currentCollection.ValueChanged += loadCollection;
             createCollectionButton.OnSave += onCollectionAdd;
             addScoreButton.OnAdd += onScoreAdd;
+            tuningManager.Current.BindValueChanged(_ =>
+            {
+                if (currentCollection.Value != null)
+                    calculateScores();
+            });
+
+            autobalanceRunner = new AutobalanceRunner(scoreCache, rulesets, configManager);
+            autobalanceTarget.BindValueChanged(_ =>
+            {
+                if (!autobalanceRunning)
+                    updateAutobalanceBaseline();
+            });
+
+            createAutobalanceParameterControls();
 
             loadCollectionList();
 
             if (RuntimeInfo.IsDesktop)
                 HotReloadCallbackReceiver.CompilationFinished += _ => Schedule(calculateScores);
+        }
+
+        private Drawable createAutobalanceContainer()
+        {
+            return new Container
+            {
+                RelativeSizeAxes = Axes.X,
+                AutoSizeAxes = Axes.Y,
+                Masking = true,
+                CornerRadius = ExtendedLabelledTextBox.CORNER_RADIUS,
+                Children = new Drawable[]
+                {
+                    new Box
+                    {
+                        RelativeSizeAxes = Axes.Both,
+                        Colour = colourProvider.Background5,
+                        Alpha = 0.6f
+                    },
+                    new FillFlowContainer
+                    {
+                        RelativeSizeAxes = Axes.X,
+                        AutoSizeAxes = Axes.Y,
+                        Direction = FillDirection.Vertical,
+                        Spacing = new Vector2(0, 6),
+                        Padding = new MarginPadding { Horizontal = 10, Vertical = 8 },
+                        Children = new Drawable[]
+                        {
+                            new OsuSpriteText
+                            {
+                                Text = "Autobalance",
+                                Font = OsuFont.GetFont(size: 16, weight: FontWeight.SemiBold),
+                                Margin = new MarginPadding { Bottom = 2 }
+                            },
+                            new OverlaySortTabControl<AutobalanceTarget>
+                            {
+                                Title = "Target",
+                                Current = { BindTarget = autobalanceTarget }
+                            },
+                            new OsuSpriteText
+                            {
+                                Text = "Parameters",
+                                Font = OsuFont.GetFont(size: 12, weight: FontWeight.SemiBold),
+                                Colour = colourProvider.Light2,
+                                Margin = new MarginPadding { Top = 6 }
+                            },
+                            autobalanceParametersContainer = new FillFlowContainer
+                            {
+                                RelativeSizeAxes = Axes.X,
+                                AutoSizeAxes = Axes.Y,
+                                Direction = FillDirection.Full,
+                                Spacing = new Vector2(10, 6),
+                            },
+                            new FillFlowContainer
+                            {
+                                RelativeSizeAxes = Axes.X,
+                                AutoSizeAxes = Axes.Y,
+                                Direction = FillDirection.Horizontal,
+                                Spacing = new Vector2(10, 0),
+                                Children = new Drawable[]
+                                {
+                                    autobalanceRunButton = new RoundedButton
+                                    {
+                                        Width = 160,
+                                        Height = 40,
+                                        Text = "Auto-balance",
+                                        Action = runAutobalance,
+                                        BackgroundColour = colourProvider.Background1
+                                    },
+                                    autobalanceStatusText = new OsuSpriteText
+                                    {
+                                        Anchor = Anchor.CentreLeft,
+                                        Origin = Anchor.CentreLeft,
+                                        Font = OsuFont.GetFont(size: 12, weight: FontWeight.SemiBold),
+                                        Colour = colourProvider.Light2,
+                                        Text = "Ready"
+                                    }
+                                }
+                            },
+                            new Container
+                            {
+                                RelativeSizeAxes = Axes.X,
+                                Height = 6,
+                                Masking = true,
+                                CornerRadius = 3,
+                                Margin = new MarginPadding { Top = 4 },
+                                Children = new Drawable[]
+                                {
+                                    new Box
+                                    {
+                                        RelativeSizeAxes = Axes.Both,
+                                        Colour = colourProvider.Background6.Lighten(0.1f),
+                                        Alpha = 0.6f
+                                    },
+                                    autobalanceProgressFill = new Box
+                                    {
+                                        RelativeSizeAxes = Axes.Both,
+                                        Anchor = Anchor.CentreLeft,
+                                        Origin = Anchor.CentreLeft,
+                                        Width = 0,
+                                        Height = 1,
+                                        Colour = colourProvider.Background1
+                                    }
+                                }
+                            },
+                            autobalanceTimeText = new OsuSpriteText
+                            {
+                                Font = OsuFont.GetFont(size: 12, weight: FontWeight.SemiBold),
+                                Colour = colourProvider.Light2,
+                                Text = string.Empty
+                            }
+                        }
+                    }
+                }
+            };
         }
 
         private void onScoreAdd(long scoreId)
@@ -240,6 +394,7 @@ namespace PerformanceCalculatorGUI.Screens
 
             collectionNameText.Text = obj.NewValue!.Name;
             collectionContainer.Show();
+            resetAutobalanceUi();
 
             calculateScores();
         }
@@ -315,6 +470,9 @@ namespace PerformanceCalculatorGUI.Screens
                 {
                     updateSorting(sorting.Value);
                     loadingLayer.Hide();
+
+                    if (!autobalanceRunning)
+                        updateAutobalanceBaseline();
                 });
             }, TaskContinuationOptions.None);
         }
@@ -427,5 +585,243 @@ namespace PerformanceCalculatorGUI.Screens
                 scoresList.SetLayoutPosition(sortedScores[i], i);
             }
         }
+
+        #region Autobalance
+
+        private void createAutobalanceParameterControls()
+        {
+            autobalanceParametersContainer.Clear();
+            autobalanceParameterStates.Clear();
+
+            foreach (var section in OsuDifficultyTuningParameters.Sections)
+            {
+                foreach (var parameter in section.Parameters)
+                {
+                    var bindable = new BindableBool { Value = parameter.DefaultEnabled };
+                    autobalanceParameterStates[parameter] = bindable;
+
+                    autobalanceParametersContainer.Add(new Container
+                    {
+                        Width = 230,
+                        AutoSizeAxes = Axes.Y,
+                        Child = new ExtendedOsuCheckbox
+                        {
+                            RelativeSizeAxes = Axes.X,
+                            Padding = new MarginPadding(4),
+                            Current = { BindTarget = bindable },
+                            LabelText = parameter.UiLabel,
+                            TextColour = colourProvider.Light2
+                        }
+                    });
+                }
+            }
+        }
+
+        private void runAutobalance()
+        {
+            if (autobalanceRunning)
+                return;
+
+            if (currentCollection.Value == null)
+            {
+                notificationDisplay.Display(new Notification("Select a collection first."));
+                return;
+            }
+
+            var selectedParameters = autobalanceParameterStates
+                                     .Where(kv => kv.Value.Value)
+                                     .Select(kv => kv.Key)
+                                     .ToArray();
+
+            if (selectedParameters.Length == 0)
+            {
+                notificationDisplay.Display(new Notification("Select at least one tuning parameter."));
+                return;
+            }
+
+            setAutobalanceState(true, "Preparing...");
+
+            var collection = currentCollection.Value;
+            var target = autobalanceTarget.Value;
+
+            autobalanceRunner.RunOsuAsync(collection, target, selectedParameters, tuningManager.Current.Value, progress: onAutobalanceProgress)
+                             .ContinueWith(handleAutobalanceResult, TaskContinuationOptions.None);
+        }
+
+        private void handleAutobalanceResult(Task<AutobalanceResult<OsuDifficultyConstants>> task)
+        {
+            if (task.Exception != null)
+                Logger.Log(task.Exception.ToString(), level: LogLevel.Error);
+
+            Schedule(() =>
+            {
+                loadingLayer.Hide();
+
+                var result = task.IsFaulted ? AutobalanceResult<OsuDifficultyConstants>.Failure("Autobalance failed.") : task.GetAwaiter().GetResult();
+
+                if (task.IsFaulted || result.IsFailure)
+                {
+                    string message = task.IsFaulted
+                        ? task.Exception?.Flatten().Message ?? "Autobalance failed."
+                        : result.ErrorMessage ?? "Autobalance failed.";
+
+                    notificationDisplay.Display(new Notification(message));
+                    setAutobalanceState(false, "Failed");
+                    return;
+                }
+
+                tuningManager.Current.Value = result.Constants!;
+                setAutobalanceProgress(1);
+                setAutobalanceState(false, $"RMSE {result.Evaluation.Rmse:0.##}pp, \u03c1={result.Evaluation.Spearman:0.###} ({result.SampleCount} scores)");
+            });
+        }
+
+        private void resetAutobalanceUi()
+        {
+            autobalanceStage = "Ready";
+            autobalanceStatusText.Text = autobalanceStage;
+            autobalanceTimeText.Text = string.Empty;
+            setAutobalanceProgress(0);
+        }
+
+        private void updateAutobalanceBaseline()
+        {
+            if (currentCollection.Value == null || !scoresList.Children.Any())
+            {
+                autobalanceStatusText.Text = "Ready";
+                return;
+            }
+
+            var expectedPerformance = currentCollection.Value.ExpectedPerformance;
+
+            if (expectedPerformance.Count == 0)
+            {
+                autobalanceStatusText.Text = "Ready";
+                return;
+            }
+
+            var target = autobalanceTarget.Value;
+            var getTargetValue = AutobalanceEvaluator<OsuDifficultyConstants>.GetOsuTargetValueFunc();
+            var pairs = new List<(double actual, double expected, double weight)>();
+
+            foreach (var container in scoresList.Children)
+            {
+                var score = container.Score;
+
+                if (score.SoloScore.RulesetID != 0)
+                    continue;
+
+                string key = score.SoloScore.ID.ToString()!;
+
+                if (!expectedPerformance.TryGetValue(key, out var expectedValues))
+                    continue;
+
+                if (!AutobalanceDataset.TryGetExpectedValue(expectedValues, target, out double expectedValue))
+                    continue;
+
+                double? actualValue = getTargetValue(score.PerformanceAttributes, target);
+
+                if (actualValue == null)
+                    continue;
+
+                double weight = expectedValues.Weight ?? 1.0;
+                pairs.Add((actualValue.Value, expectedValue, weight));
+            }
+
+            if (pairs.Count == 0)
+            {
+                autobalanceStatusText.Text = "Ready";
+                return;
+            }
+
+            double weightSum = pairs.Sum(p => p.weight);
+            double weightedMse = pairs.Sum(p => p.weight * (p.actual - p.expected) * (p.actual - p.expected)) / weightSum;
+            double rmse = Math.Sqrt(weightedMse);
+
+            if (pairs.Count < 2)
+            {
+                autobalanceStatusText.Text = $"Ready \u2014 RMSE {rmse:0.##}pp (1 score)";
+                return;
+            }
+
+            double spearman = AutobalanceEvaluator<OsuDifficultyConstants>.ComputeSpearmanCorrelation(
+                pairs.Select(p => p.actual).ToArray(),
+                pairs.Select(p => p.expected).ToArray(),
+                pairs.Count);
+            autobalanceStatusText.Text = $"Ready \u2014 RMSE {rmse:0.##}pp, \u03c1={spearman:0.###} ({pairs.Count} scores)";
+        }
+
+        private void setAutobalanceProgress(double progress)
+        {
+            autobalanceProgressFill.Width = (float)Math.Clamp(progress, 0, 1);
+        }
+
+        private void updateAutobalanceElapsed()
+        {
+            if (!autobalanceRunning)
+                return;
+
+            autobalanceTimeText.Text = $"Elapsed {formatElapsed(autobalanceStopwatch.Elapsed)}";
+        }
+
+        private static string formatElapsed(TimeSpan elapsed)
+        {
+            if (elapsed.TotalHours >= 1)
+                return elapsed.ToString(@"h\:mm\:ss");
+            if (elapsed.TotalMinutes >= 1)
+                return elapsed.ToString(@"m\:ss\.f");
+            return $"{elapsed.TotalSeconds:0.0}s";
+        }
+
+        private void onAutobalanceProgress(AutobalanceProgress progress)
+        {
+            Schedule(() =>
+            {
+                if (!autobalanceRunning)
+                    return;
+
+                setAutobalanceProgress(progress.Value);
+
+                if (!string.IsNullOrEmpty(progress.Stage))
+                    autobalanceStage = progress.Stage;
+
+                string percent = $"{progress.Value:0%}";
+
+                if (progress.Total.HasValue && progress.Total.Value > 0 && progress.Completed.HasValue)
+                    autobalanceStatusText.Text = $"{autobalanceStage} {progress.Completed.Value}/{progress.Total.Value} ({percent})";
+                else
+                    autobalanceStatusText.Text = $"{autobalanceStage} ({percent})";
+            });
+        }
+
+        private void setAutobalanceState(bool running, string status)
+        {
+            autobalanceRunning = running;
+            autobalanceRunButton.Enabled.Value = !running;
+            autobalanceStage = status;
+            autobalanceStatusText.Text = status;
+
+            if (running)
+            {
+                autobalanceStopwatch.Restart();
+                autobalanceTimeText.Text = "Elapsed 0.0s";
+                setAutobalanceProgress(0);
+
+                autobalanceElapsedUpdate?.Cancel();
+                autobalanceElapsedUpdate = Scheduler.AddDelayed(updateAutobalanceElapsed, 100, true);
+
+                loadingLayer.Show();
+            }
+            else
+            {
+                autobalanceElapsedUpdate?.Cancel();
+                autobalanceElapsedUpdate = null;
+
+                autobalanceStopwatch.Stop();
+                autobalanceTimeText.Text = $"Took {formatElapsed(autobalanceStopwatch.Elapsed)}";
+            }
+        }
+
+        #endregion
     }
 }
