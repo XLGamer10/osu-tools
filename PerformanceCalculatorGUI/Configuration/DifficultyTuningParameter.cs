@@ -31,6 +31,9 @@ namespace PerformanceCalculatorGUI.Configuration
             Setter = setter;
         }
 
+        public DifficultyTuningParameter<TConstants> WithBounds(double minValue, double? maxValue)
+            => new DifficultyTuningParameter<TConstants>(PropertyName, UiLabel, IsInteger, minValue, maxValue, DefaultEnabled, Getter, Setter);
+
         public static DifficultyTuningParameter<TConstants> ForDouble(string propertyName, string uiLabel, Func<TConstants, double> getter,
                                                                       Func<TConstants, double, TConstants> setter, bool defaultEnabled = true,
                                                                       double minValue = 0.01, double? maxValue = null)

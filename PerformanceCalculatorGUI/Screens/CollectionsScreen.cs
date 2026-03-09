@@ -82,8 +82,8 @@ namespace PerformanceCalculatorGUI.Screens
         private readonly Stopwatch autobalanceStopwatch = new Stopwatch();
         private ScheduledDelegate? autobalanceElapsedUpdate;
         private readonly Bindable<AutobalanceTarget> autobalanceTarget = new Bindable<AutobalanceTarget>(AutobalanceTarget.Total);
-        private readonly Dictionary<DifficultyTuningParameter<OsuDifficultyConstants>, BindableBool> autobalanceParameterStates
-            = new Dictionary<DifficultyTuningParameter<OsuDifficultyConstants>, BindableBool>();
+        private readonly Dictionary<DifficultyTuningParameter<OsuDifficultyConstants>, AutobalanceParameterState> autobalanceParameterStates
+            = new Dictionary<DifficultyTuningParameter<OsuDifficultyConstants>, AutobalanceParameterState>();
         private bool autobalanceRunning;
         private LimitedLabelledNumberBox saIterationsBox = null!;
         private LimitedLabelledNumberBox saRestartsBox = null!;
@@ -638,46 +638,144 @@ namespace PerformanceCalculatorGUI.Screens
             autobalanceParametersContainer.Clear();
             autobalanceParameterStates.Clear();
 
+            var currentConstants = tuningManager.Current.Value;
+
             foreach (var section in OsuDifficultyTuningParameters.Sections)
             {
-                autobalanceParametersContainer.Add(new OsuSpriteText
+                var sectionBindables = new List<BindableBool>();
+
+                // Section toggle checkbox
+                var sectionToggle = new BindableBool { Value = section.Parameters.Any(p => p.DefaultEnabled) };
+                var sectionCheckbox = new ExtendedOsuCheckbox
                 {
-                    Text = section.Title,
-                    Font = OsuFont.GetFont(size: 11, weight: FontWeight.SemiBold),
-                    Colour = colourProvider.Light1,
-                    Margin = new MarginPadding { Top = 4 }
+                    RelativeSizeAxes = Axes.X,
+                    Padding = new MarginPadding(4),
+                    Current = { BindTarget = sectionToggle },
+                    LabelText = section.Title,
+                    TextColour = colourProvider.Light1
+                };
+
+                autobalanceParametersContainer.Add(new Container
+                {
+                    RelativeSizeAxes = Axes.X,
+                    AutoSizeAxes = Axes.Y,
+                    Margin = new MarginPadding { Top = 4 },
+                    Child = sectionCheckbox
                 });
 
                 var sectionFlow = new FillFlowContainer
                 {
                     RelativeSizeAxes = Axes.X,
                     AutoSizeAxes = Axes.Y,
-                    Direction = FillDirection.Full,
-                    Spacing = new Vector2(10, 4),
+                    Direction = FillDirection.Vertical,
+                    Spacing = new Vector2(0, 2),
+                    Padding = new MarginPadding { Left = 16 },
                 };
 
                 foreach (var parameter in section.Parameters)
                 {
-                    var bindable = new BindableBool { Value = parameter.DefaultEnabled };
-                    autobalanceParameterStates[parameter] = bindable;
+                    var state = new AutobalanceParameterState();
+                    state.Enabled.Value = parameter.DefaultEnabled;
+                    autobalanceParameterStates[parameter] = state;
+                    sectionBindables.Add(state.Enabled);
 
-                    sectionFlow.Add(new Container
+                    double baseVal = parameter.Getter(currentConstants);
+                    string minPlaceholder = computeDefaultLowerBound(parameter, baseVal).ToString("G4");
+                    string maxPlaceholder = computeDefaultUpperBound(parameter, baseVal).ToString("G4");
+
+                    var minBox = new NullableLabelledFractionalNumberBox
                     {
-                        Width = 230,
+                        Label = "Min",
+                        PlaceholderText = minPlaceholder,
+                        MinValue = 0,
+                    };
+                    minBox.Value.BindTo(state.MinBound);
+
+                    var maxBox = new NullableLabelledFractionalNumberBox
+                    {
+                        Label = "Max",
+                        PlaceholderText = maxPlaceholder,
+                        MinValue = 0,
+                    };
+                    maxBox.Value.BindTo(state.MaxBound);
+
+                    sectionFlow.Add(new GridContainer
+                    {
+                        RelativeSizeAxes = Axes.X,
                         AutoSizeAxes = Axes.Y,
-                        Child = new ExtendedOsuCheckbox
+                        ColumnDimensions = new[]
                         {
-                            RelativeSizeAxes = Axes.X,
-                            Padding = new MarginPadding(4),
-                            Current = { BindTarget = bindable },
-                            LabelText = parameter.UiLabel,
-                            TextColour = colourProvider.Light2
+                            new Dimension(GridSizeMode.Absolute, 230),
+                            new Dimension(),
+                            new Dimension(),
+                        },
+                        RowDimensions = new[] { new Dimension(GridSizeMode.AutoSize) },
+                        Content = new[]
+                        {
+                            new Drawable[]
+                            {
+                                new Container
+                                {
+                                    RelativeSizeAxes = Axes.X,
+                                    AutoSizeAxes = Axes.Y,
+                                    Child = new ExtendedOsuCheckbox
+                                    {
+                                        RelativeSizeAxes = Axes.X,
+                                        Padding = new MarginPadding(4),
+                                        Current = { BindTarget = state.Enabled },
+                                        LabelText = parameter.UiLabel,
+                                        TextColour = colourProvider.Light2
+                                    }
+                                },
+                                minBox,
+                                maxBox
+                            }
                         }
                     });
                 }
 
                 autobalanceParametersContainer.Add(sectionFlow);
+
+                // Wire section toggle to set/unset all parameters in this section
+                var capturedBindables = sectionBindables.ToArray();
+                bool suppressSectionToggle = false;
+
+                sectionToggle.BindValueChanged(e =>
+                {
+                    if (suppressSectionToggle)
+                        return;
+
+                    foreach (var b in capturedBindables)
+                        b.Value = e.NewValue;
+                });
+
+                // Update section toggle when individual parameters change
+                foreach (var b in capturedBindables)
+                {
+                    b.BindValueChanged(_ =>
+                    {
+                        suppressSectionToggle = true;
+                        sectionToggle.Value = capturedBindables.Any(bb => bb.Value);
+                        suppressSectionToggle = false;
+                    });
+                }
             }
+        }
+
+        private static double computeDefaultLowerBound(DifficultyTuningParameter<OsuDifficultyConstants> parameter, double baseVal)
+        {
+            if (parameter.MaxValue is { })
+                return parameter.MinValue;
+
+            return Math.Max(parameter.MinValue, baseVal * 0.33);
+        }
+
+        private static double computeDefaultUpperBound(DifficultyTuningParameter<OsuDifficultyConstants> parameter, double baseVal)
+        {
+            if (parameter.MaxValue is { } maxVal)
+                return maxVal;
+
+            return Math.Max(baseVal * 3.0, parameter.MinValue * 3.0);
         }
 
         private void runAutobalance()
@@ -692,8 +790,21 @@ namespace PerformanceCalculatorGUI.Screens
             }
 
             var selectedParameters = autobalanceParameterStates
-                                     .Where(kv => kv.Value.Value)
-                                     .Select(kv => kv.Key)
+                                     .Where(kv => kv.Value.Enabled.Value)
+                                     .Select(kv =>
+                                     {
+                                         var param = kv.Key;
+                                         var state = kv.Value;
+
+                                         if (state.MinBound.Value != null || state.MaxBound.Value != null)
+                                         {
+                                             double min = state.MinBound.Value ?? param.MinValue;
+                                             double? max = state.MaxBound.Value ?? param.MaxValue;
+                                             return param.WithBounds(min, max);
+                                         }
+
+                                         return param;
+                                     })
                                      .ToArray();
 
             if (selectedParameters.Length == 0)
@@ -893,5 +1004,12 @@ namespace PerformanceCalculatorGUI.Screens
         }
 
         #endregion
+
+        private class AutobalanceParameterState
+        {
+            public BindableBool Enabled { get; } = new BindableBool();
+            public Bindable<double?> MinBound { get; } = new Bindable<double?>();
+            public Bindable<double?> MaxBound { get; } = new Bindable<double?>();
+        }
     }
 }
