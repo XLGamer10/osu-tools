@@ -309,38 +309,43 @@ namespace PerformanceCalculatorGUI.Screens
                                 Colour = colourProvider.Light2,
                                 Margin = new MarginPadding { Top = 6 }
                             },
-                            new FillFlowContainer
+                            new GridContainer
                             {
                                 RelativeSizeAxes = Axes.X,
                                 AutoSizeAxes = Axes.Y,
-                                Direction = FillDirection.Full,
-                                Spacing = new Vector2(10, 6),
-                                Children = new Drawable[]
+                                ColumnDimensions = new[]
                                 {
-                                    saIterationsBox = new LimitedLabelledNumberBox
+                                    new Dimension(),
+                                    new Dimension(),
+                                    new Dimension(),
+                                },
+                                RowDimensions = new[] { new Dimension(GridSizeMode.AutoSize) },
+                                Content = new[]
+                                {
+                                    new Drawable[]
                                     {
-                                        Width = 160,
-                                        Label = "Iterations",
-                                        PlaceholderText = "5000",
-                                        MinValue = 100,
-                                        MaxValue = 100000,
-                                    },
-                                    saRestartsBox = new LimitedLabelledNumberBox
-                                    {
-                                        Width = 140,
-                                        Label = "Restarts",
-                                        PlaceholderText = "1",
-                                        MinValue = 1,
-                                        MaxValue = 20,
-                                    },
-                                    saSeedBox = new LimitedLabelledNumberBox
-                                    {
-                                        Width = 140,
-                                        Label = "Seed",
-                                        PlaceholderText = "42",
-                                        MinValue = 0,
-                                        MaxValue = 999999,
-                                    },
+                                        saIterationsBox = new LimitedLabelledNumberBox
+                                        {
+                                            Label = "Iterations",
+                                            PlaceholderText = "5000",
+                                            MinValue = 100,
+                                            MaxValue = 100000,
+                                        },
+                                        saRestartsBox = new LimitedLabelledNumberBox
+                                        {
+                                            Label = "Restarts",
+                                            PlaceholderText = "1",
+                                            MinValue = 1,
+                                            MaxValue = 20,
+                                        },
+                                        saSeedBox = new LimitedLabelledNumberBox
+                                        {
+                                            Label = "Seed",
+                                            PlaceholderText = "42",
+                                            MinValue = 0,
+                                            MaxValue = 999999,
+                                        },
+                                    }
                                 }
                             },
                             new FillFlowContainer
