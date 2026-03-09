@@ -1,4 +1,4 @@
-﻿// Copyright (c) ppy Pty Ltd <contact@ppy.sh>. Licensed under the MIT Licence.
+// Copyright (c) ppy Pty Ltd <contact@ppy.sh>. Licensed under the MIT Licence.
 // See the LICENCE file in the repository root for full licence text.
 
 using System.Collections.Generic;
@@ -17,6 +17,7 @@ using osu.Game.Rulesets.Catch.Difficulty.Evaluators;
 using osu.Game.Rulesets.Catch.Difficulty.Preprocessing;
 using osu.Game.Rulesets.Difficulty.Preprocessing;
 using osu.Game.Rulesets.Mods;
+using osu.Game.Rulesets.Osu.Difficulty;
 using osu.Game.Rulesets.Osu.Difficulty.Evaluators;
 using osu.Game.Rulesets.Osu.Difficulty.Evaluators.Aim;
 using osu.Game.Rulesets.Osu.Difficulty.Evaluators.Speed;
@@ -142,15 +143,15 @@ namespace PerformanceCalculatorGUI.Screens.ObjectInspection
                 new ObjectInspectorDifficultyValue("Min Jump Dist", hitObject.MinimumJumpDistance),
                 new ObjectInspectorDifficultyValue("Min Jump Time", hitObject.MinimumJumpTime),
 
-                new ObjectInspectorDifficultyValue("Snap Aim Difficulty", SnapAimEvaluator.EvaluateDifficultyOf(hitObject, true)),
-                new ObjectInspectorDifficultyValue("Snap Aim Difficulty (w/o sliders)", SnapAimEvaluator.EvaluateDifficultyOf(hitObject, false)),
-                new ObjectInspectorDifficultyValue("Flow Aim Difficulty", FlowAimEvaluator.EvaluateDifficultyOf(hitObject, true)),
-                new ObjectInspectorDifficultyValue("Flow Aim Difficulty (w/o sliders)", FlowAimEvaluator.EvaluateDifficultyOf(hitObject, false)),
-                new ObjectInspectorDifficultyValue("Agility Difficulty", AgilityEvaluator.EvaluateDifficultyOf(hitObject)),
-                new ObjectInspectorDifficultyValue("Speed Difficulty", SpeedEvaluator.EvaluateDifficultyOf(hitObject)),
-                new ObjectInspectorDifficultyValue("Rhythm Difficulty", osu.Game.Rulesets.Osu.Difficulty.Evaluators.Speed.RhythmEvaluator.EvaluateDifficultyOf(hitObject)),
-                new ObjectInspectorDifficultyValue("Reading Difficulty", osu.Game.Rulesets.Osu.Difficulty.Evaluators.ReadingEvaluator.EvaluateDifficultyOf(hitObject, hidden)),
-                new ObjectInspectorDifficultyValue(hidden ? "FLHD Difficulty" : "Flashlight Diff", FlashlightEvaluator.EvaluateDifficultyOf(hitObject, appliedMods.Value)),
+                new ObjectInspectorDifficultyValue("Snap Aim Difficulty", SnapAimEvaluator.EvaluateDifficultyOf(hitObject, true, OsuDifficultyConstants.Default)),
+                new ObjectInspectorDifficultyValue("Snap Aim Difficulty (w/o sliders)", SnapAimEvaluator.EvaluateDifficultyOf(hitObject, false, OsuDifficultyConstants.Default)),
+                new ObjectInspectorDifficultyValue("Flow Aim Difficulty", FlowAimEvaluator.EvaluateDifficultyOf(hitObject, true, OsuDifficultyConstants.Default)),
+                new ObjectInspectorDifficultyValue("Flow Aim Difficulty (w/o sliders)", FlowAimEvaluator.EvaluateDifficultyOf(hitObject, false, OsuDifficultyConstants.Default)),
+                new ObjectInspectorDifficultyValue("Agility Difficulty", AgilityEvaluator.EvaluateDifficultyOf(hitObject, OsuDifficultyConstants.Default)),
+                new ObjectInspectorDifficultyValue("Speed Difficulty", SpeedEvaluator.EvaluateDifficultyOf(hitObject, OsuDifficultyConstants.Default)),
+                new ObjectInspectorDifficultyValue("Rhythm Difficulty", osu.Game.Rulesets.Osu.Difficulty.Evaluators.Speed.RhythmEvaluator.EvaluateDifficultyOf(hitObject, OsuDifficultyConstants.Default)),
+                new ObjectInspectorDifficultyValue("Reading Difficulty", osu.Game.Rulesets.Osu.Difficulty.Evaluators.ReadingEvaluator.EvaluateDifficultyOf(hitObject, hidden, OsuDifficultyConstants.Default)),
+                new ObjectInspectorDifficultyValue(hidden ? "FLHD Difficulty" : "Flashlight Diff", FlashlightEvaluator.EvaluateDifficultyOf(hitObject, appliedMods.Value, OsuDifficultyConstants.Default)),
             });
 
             if (hitObject.Angle is not null)
