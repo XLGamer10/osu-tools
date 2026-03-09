@@ -646,22 +646,22 @@ namespace PerformanceCalculatorGUI.Screens
 
                 // Section toggle checkbox
                 var sectionToggle = new BindableBool { Value = section.Parameters.Any(p => p.DefaultEnabled) };
-                var sectionCheckbox = new ExtendedOsuCheckbox
+                var sectionCheckbox = new ExtendedOsuCheckbox(nubOnRight: false)
                 {
                     RelativeSizeAxes = Axes.X,
                     Padding = new MarginPadding(4),
                     Current = { BindTarget = sectionToggle },
-                    LabelText = section.Title,
-                    TextColour = colourProvider.Light1
                 };
 
-                autobalanceParametersContainer.Add(new Container
+                var collapseIcon = new SpriteIcon
                 {
-                    RelativeSizeAxes = Axes.X,
-                    AutoSizeAxes = Axes.Y,
-                    Margin = new MarginPadding { Top = 4 },
-                    Child = sectionCheckbox
-                });
+                    Icon = FontAwesome.Solid.ChevronDown,
+                    Size = new Vector2(10),
+                    Anchor = Anchor.CentreLeft,
+                    Origin = Anchor.Centre,
+                    Colour = colourProvider.Light1,
+                    Margin = new MarginPadding { Left = 6 },
+                };
 
                 var sectionFlow = new FillFlowContainer
                 {
@@ -671,6 +671,56 @@ namespace PerformanceCalculatorGUI.Screens
                     Spacing = new Vector2(0, 2),
                     Padding = new MarginPadding { Left = 16 },
                 };
+
+                Action toggleCollapse = () =>
+                {
+                    if (sectionFlow.Alpha > 0)
+                    {
+                        sectionFlow.Hide();
+                        collapseIcon.RotateTo(-90, 200, Easing.OutQuint);
+                    }
+                    else
+                    {
+                        sectionFlow.Show();
+                        collapseIcon.RotateTo(0, 200, Easing.OutQuint);
+                    }
+                };
+
+                autobalanceParametersContainer.Add(new FillFlowContainer
+                {
+                    RelativeSizeAxes = Axes.X,
+                    AutoSizeAxes = Axes.Y,
+                    Direction = FillDirection.Horizontal,
+                    Spacing = new Vector2(4, 0),
+                    Margin = new MarginPadding { Top = 4 },
+                    Children = new Drawable[]
+                    {
+                        new OsuClickableContainer
+                        {
+                            Size = new Vector2(16, 20),
+                            Action = toggleCollapse,
+                            Child = collapseIcon,
+                        },
+                        new OsuClickableContainer
+                        {
+                            AutoSizeAxes = Axes.Both,
+                            Action = toggleCollapse,
+                            Child = new OsuSpriteText
+                            {
+                                Text = section.Title,
+                                Colour = colourProvider.Light1,
+                                Anchor = Anchor.CentreLeft,
+                                Origin = Anchor.CentreLeft,
+                                Padding = new MarginPadding { Top = 4, Bottom = 4 },
+                            }
+                        },
+                        new Container
+                        {
+                            Size = new Vector2(40, 20),
+                            Child = sectionCheckbox,
+                        },
+                    }
+                });
 
                 foreach (var parameter in section.Parameters)
                 {

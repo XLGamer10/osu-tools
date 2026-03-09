@@ -9,6 +9,11 @@ namespace PerformanceCalculatorGUI.Components
 {
     public partial class ExtendedOsuCheckbox : OsuCheckbox
     {
+        public ExtendedOsuCheckbox(bool nubOnRight = true)
+            : base(nubOnRight)
+        {
+        }
+
         public ColourInfo TextColour { get; set; }
 
         protected override void ApplyLabelParameters(SpriteText text)
