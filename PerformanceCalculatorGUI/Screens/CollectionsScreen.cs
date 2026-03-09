@@ -442,9 +442,10 @@ namespace PerformanceCalculatorGUI.Screens
 
                     var parsedScore = new ProcessorScoreDecoder(working).Parse(scoreInfo);
 
-                    var difficultyCalculator = rulesetInstance.CreateDifficultyCalculator(working);
+                    var tunedRuleset = RulesetHelper.CreateRulesetWithTuning(rulesetInstance.RulesetInfo, tuningManager);
+                    var difficultyCalculator = tunedRuleset.CreateDifficultyCalculator(working);
                     var difficultyAttributes = difficultyCalculator.Calculate(mods);
-                    var performanceCalculator = rulesetInstance.CreatePerformanceCalculator();
+                    var performanceCalculator = tunedRuleset.CreatePerformanceCalculator();
                     if (performanceCalculator == null)
                         continue;
 
