@@ -222,8 +222,9 @@ namespace PerformanceCalculatorGUI.Screens
             saveCurrentCollection();
         }
 
-        private void onScoreRemove(long scoreId)
+        private void onScoreRemove(ExtendedScore score)
         {
+            long scoreId = (long)score.SoloScore.ID!;
             currentCollection.Value!.Scores = currentCollection.Value.Scores.Where(x => x != scoreId).ToArray();
 
             saveCurrentCollection();
@@ -245,14 +246,18 @@ namespace PerformanceCalculatorGUI.Screens
 
         private void saveCurrentCollection()
         {
+            persistCurrentCollection();
+            calculateScores();
+        }
+
+        private void persistCurrentCollection()
+        {
             if (currentCollection.Value == null)
                 return;
 
             string path = Path.Combine(collections_directory, currentCollection.Value.FileName);
 
             File.WriteAllText(path, JsonConvert.SerializeObject(currentCollection.Value));
-
-            calculateScores();
         }
 
         private void calculateScores()
@@ -291,7 +296,10 @@ namespace PerformanceCalculatorGUI.Screens
                     var perfAttributes = performanceCalculator.Calculate(parsedScore.ScoreInfo, difficultyAttributes);
                     Schedule(() =>
                     {
-                        var scoreContainer = new ScoreContainer(new ExtendedScore(score, difficultyAttributes, perfAttributes));
+                        var scoreContainer = new ScoreContainer(
+                            new ExtendedScore(score, difficultyAttributes, perfAttributes),
+                            currentCollection.Value!.ExpectedPerformance,
+                            persistCurrentCollection);
                         scoreContainer.OnDelete += onScoreRemove;
 
                         scoresList.Add(scoreContainer);
