@@ -35,7 +35,7 @@ namespace PerformanceCalculatorGUI.Screens.Collections.Autobalance
 
             return RunAsync(collection, target, selectedParameters, baseConstants, "osu",
                 (tuning, working) => new OsuDifficultyCalculator(osuRuleset.RulesetInfo, working, tuning),
-                osuRuleset.CreatePerformanceCalculator()!,
+                () => osuRuleset.CreatePerformanceCalculator()!,
                 AutobalanceEvaluator<OsuDifficultyConstants>.GetOsuTargetValueFunc(),
                 config, progress);
         }
@@ -45,7 +45,7 @@ namespace PerformanceCalculatorGUI.Screens.Collections.Autobalance
             DifficultyTuningParameter<TConstants>[] selectedParameters,
             TConstants baseConstants, string rulesetShortName,
             Func<TConstants, IWorkingBeatmap, DifficultyCalculator> createDifficultyCalculator,
-            PerformanceCalculator performanceCalculator,
+            Func<PerformanceCalculator> createPerformanceCalculator,
             Func<PerformanceAttributes?, AutobalanceTarget, double?> getTargetValue,
             SAConfig? config = null,
             Action<AutobalanceProgress>? progress = null)
@@ -65,7 +65,7 @@ namespace PerformanceCalculatorGUI.Screens.Collections.Autobalance
             // Filter out integer parameters — they're discrete, not suitable for continuous optimization
             selectedParameters = selectedParameters.Where(p => !p.IsInteger).ToArray();
 
-            var evaluator = new AutobalanceEvaluator<TConstants>(createDifficultyCalculator, performanceCalculator, getTargetValue);
+            var evaluator = new AutobalanceEvaluator<TConstants>(createDifficultyCalculator, createPerformanceCalculator, getTargetValue);
 
             if (selectedParameters.Length == 0)
             {

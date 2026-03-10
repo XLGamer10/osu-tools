@@ -16,15 +16,15 @@ namespace PerformanceCalculatorGUI.Screens.Collections.Autobalance
         private const double big_penalty = 1e12;
 
         private readonly Func<TConstants, IWorkingBeatmap, DifficultyCalculator> createDifficultyCalculator;
-        private readonly PerformanceCalculator performanceCalculator;
+        private readonly Func<PerformanceCalculator> createPerformanceCalculator;
         private readonly Func<PerformanceAttributes?, AutobalanceTarget, double?> getTargetValue;
 
         public AutobalanceEvaluator(Func<TConstants, IWorkingBeatmap, DifficultyCalculator> createDifficultyCalculator,
-                                    PerformanceCalculator performanceCalculator,
+                                    Func<PerformanceCalculator> createPerformanceCalculator,
                                     Func<PerformanceAttributes?, AutobalanceTarget, double?> getTargetValue)
         {
             this.createDifficultyCalculator = createDifficultyCalculator;
-            this.performanceCalculator = performanceCalculator;
+            this.createPerformanceCalculator = createPerformanceCalculator;
             this.getTargetValue = getTargetValue;
         }
 
@@ -39,20 +39,25 @@ namespace PerformanceCalculatorGUI.Screens.Collections.Autobalance
                 var computedActuals = new double[n];
                 var valid = new bool[n];
 
-                Parallel.For(0, n, i =>
-                {
-                    var entry = dataset[i];
-                    var difficultyCalculator = createDifficultyCalculator(tuning, entry.Working);
-                    var difficultyAttributes = difficultyCalculator.Calculate(entry.Mods);
-                    var performanceAttributes = performanceCalculator.Calculate(entry.ScoreInfo, difficultyAttributes);
-                    double? actual = getTargetValue(performanceAttributes, target);
-
-                    if (actual != null)
+                Parallel.For(0, n,
+                    () => createPerformanceCalculator(),
+                    (i, _, perfCalc) =>
                     {
-                        computedActuals[i] = actual.Value;
-                        valid[i] = true;
-                    }
-                });
+                        var entry = dataset[i];
+                        var difficultyCalculator = createDifficultyCalculator(tuning, entry.Working);
+                        var difficultyAttributes = difficultyCalculator.Calculate(entry.Mods);
+                        var performanceAttributes = perfCalc.Calculate(entry.ScoreInfo, difficultyAttributes);
+                        double? actual = getTargetValue(performanceAttributes, target);
+
+                        if (actual != null)
+                        {
+                            computedActuals[i] = actual.Value;
+                            valid[i] = true;
+                        }
+
+                        return perfCalc;
+                    },
+                    _ => { });
 
                 double weightedErrorSum = 0;
                 double weightSum = 0;
