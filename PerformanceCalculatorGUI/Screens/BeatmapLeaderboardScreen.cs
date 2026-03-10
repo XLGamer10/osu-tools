@@ -272,8 +272,7 @@ namespace PerformanceCalculatorGUI.Screens
 
                     var parsedScore = new ProcessorScoreDecoder(working).Parse(scoreInfo);
 
-                    var tunedRuleset = RulesetHelper.CreateRulesetWithTuning(rulesetInstance.RulesetInfo, tuningManager);
-                    var difficultyCalculator = tunedRuleset.CreateDifficultyCalculator(working);
+                    var difficultyCalculator = RulesetHelper.CreateTunedDifficultyCalculator(rulesetInstance.RulesetInfo, working, tuningManager);
 
                     Mod[] mods = score.Mods.Select(x => x.ToMod(rulesetInstance)).ToArray();
 

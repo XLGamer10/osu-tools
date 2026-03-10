@@ -48,12 +48,12 @@ namespace PerformanceCalculatorGUI
             };
         }
 
-        public static Ruleset CreateRulesetWithTuning(RulesetInfo rulesetInfo, DifficultyTuningManager<OsuDifficultyConstants> osuTuning)
+        public static DifficultyCalculator CreateTunedDifficultyCalculator(RulesetInfo rulesetInfo, IWorkingBeatmap working, DifficultyTuningManager<OsuDifficultyConstants> osuTuning)
         {
             return rulesetInfo.ShortName switch
             {
-                "osu" => new OsuRuleset(osuTuning.Current.Value),
-                _ => rulesetInfo.CreateInstance()
+                "osu" => new ExtendedOsuDifficultyCalculator(rulesetInfo, working, osuTuning.Current.Value),
+                _ => GetExtendedDifficultyCalculator(rulesetInfo, working)
             };
         }
 

@@ -5,6 +5,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using osu.Game.Beatmaps;
 using osu.Game.Rulesets;
 using osu.Game.Rulesets.Difficulty;
 using osu.Game.Rulesets.Osu;
@@ -30,8 +31,11 @@ namespace PerformanceCalculatorGUI.Screens.Collections.Autobalance
                                                                            SAConfig? config = null,
                                                                            Action<AutobalanceProgress>? progress = null)
         {
+            var osuRuleset = new OsuRuleset();
+
             return RunAsync(collection, target, selectedParameters, baseConstants, "osu",
-                tuning => new OsuRuleset(tuning),
+                (tuning, working) => new OsuDifficultyCalculator(osuRuleset.RulesetInfo, working, tuning),
+                osuRuleset.CreatePerformanceCalculator()!,
                 AutobalanceEvaluator<OsuDifficultyConstants>.GetOsuTargetValueFunc(),
                 config, progress);
         }
@@ -40,7 +44,8 @@ namespace PerformanceCalculatorGUI.Screens.Collections.Autobalance
             Collection collection, AutobalanceTarget target,
             DifficultyTuningParameter<TConstants>[] selectedParameters,
             TConstants baseConstants, string rulesetShortName,
-            Func<TConstants, Ruleset> createRuleset,
+            Func<TConstants, IWorkingBeatmap, DifficultyCalculator> createDifficultyCalculator,
+            PerformanceCalculator performanceCalculator,
             Func<PerformanceAttributes?, AutobalanceTarget, double?> getTargetValue,
             SAConfig? config = null,
             Action<AutobalanceProgress>? progress = null)
@@ -60,7 +65,7 @@ namespace PerformanceCalculatorGUI.Screens.Collections.Autobalance
             // Filter out integer parameters — they're discrete, not suitable for continuous optimization
             selectedParameters = selectedParameters.Where(p => !p.IsInteger).ToArray();
 
-            var evaluator = new AutobalanceEvaluator<TConstants>(createRuleset, getTargetValue);
+            var evaluator = new AutobalanceEvaluator<TConstants>(createDifficultyCalculator, performanceCalculator, getTargetValue);
 
             if (selectedParameters.Length == 0)
             {

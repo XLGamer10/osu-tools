@@ -4,7 +4,7 @@
 using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
-using osu.Game.Rulesets;
+using osu.Game.Beatmaps;
 using osu.Game.Rulesets.Difficulty;
 using osu.Game.Rulesets.Osu.Difficulty;
 using PerformanceCalculatorGUI.Configuration;
@@ -15,13 +15,16 @@ namespace PerformanceCalculatorGUI.Screens.Collections.Autobalance
     {
         private const double big_penalty = 1e12;
 
-        private readonly Func<TConstants, Ruleset> createRuleset;
+        private readonly Func<TConstants, IWorkingBeatmap, DifficultyCalculator> createDifficultyCalculator;
+        private readonly PerformanceCalculator performanceCalculator;
         private readonly Func<PerformanceAttributes?, AutobalanceTarget, double?> getTargetValue;
 
-        public AutobalanceEvaluator(Func<TConstants, Ruleset> createRuleset,
+        public AutobalanceEvaluator(Func<TConstants, IWorkingBeatmap, DifficultyCalculator> createDifficultyCalculator,
+                                    PerformanceCalculator performanceCalculator,
                                     Func<PerformanceAttributes?, AutobalanceTarget, double?> getTargetValue)
         {
-            this.createRuleset = createRuleset;
+            this.createDifficultyCalculator = createDifficultyCalculator;
+            this.performanceCalculator = performanceCalculator;
             this.getTargetValue = getTargetValue;
         }
 
@@ -31,11 +34,6 @@ namespace PerformanceCalculatorGUI.Screens.Collections.Autobalance
             try
             {
                 var tuning = ApplyParameters(constants, parameters, values);
-                var ruleset = createRuleset(tuning);
-                var performanceCalculator = ruleset.CreatePerformanceCalculator();
-
-                if (performanceCalculator == null)
-                    return new EvaluationResult(big_penalty, 0, big_penalty);
 
                 int n = dataset.Count;
                 var computedActuals = new double[n];
@@ -44,7 +42,7 @@ namespace PerformanceCalculatorGUI.Screens.Collections.Autobalance
                 Parallel.For(0, n, i =>
                 {
                     var entry = dataset[i];
-                    var difficultyCalculator = ruleset.CreateDifficultyCalculator(entry.Working);
+                    var difficultyCalculator = createDifficultyCalculator(tuning, entry.Working);
                     var difficultyAttributes = difficultyCalculator.Calculate(entry.Mods);
                     var performanceAttributes = performanceCalculator.Calculate(entry.ScoreInfo, difficultyAttributes);
                     double? actual = getTargetValue(performanceAttributes, target);
