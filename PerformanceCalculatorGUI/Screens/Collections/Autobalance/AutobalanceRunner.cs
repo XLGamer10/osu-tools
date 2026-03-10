@@ -28,7 +28,7 @@ namespace PerformanceCalculatorGUI.Screens.Collections.Autobalance
         public Task<AutobalanceResult<OsuDifficultyConstants>> RunOsuAsync(Collection collection, AutobalanceTarget target,
                                                                            DifficultyTuningParameter<OsuDifficultyConstants>[] selectedParameters,
                                                                            OsuDifficultyConstants baseConstants,
-                                                                           SAConfig? config = null,
+                                                                           OptimizerConfig? config = null,
                                                                            Action<AutobalanceProgress>? progress = null)
         {
             var osuRuleset = new OsuRuleset();
@@ -47,10 +47,10 @@ namespace PerformanceCalculatorGUI.Screens.Collections.Autobalance
             Func<TConstants, IWorkingBeatmap, DifficultyCalculator> createDifficultyCalculator,
             Func<PerformanceCalculator> createPerformanceCalculator,
             Func<PerformanceAttributes?, AutobalanceTarget, double?> getTargetValue,
-            SAConfig? config = null,
+            OptimizerConfig? config = null,
             Action<AutobalanceProgress>? progress = null)
         {
-            config ??= SAConfig.Default;
+            config ??= OptimizerConfig.Default;
 
             progress?.Invoke(new AutobalanceProgress(0, "Preparing..."));
 
@@ -77,7 +77,7 @@ namespace PerformanceCalculatorGUI.Screens.Collections.Autobalance
 
             progress?.Invoke(new AutobalanceProgress(dataset_progress_portion, "Optimizing..."));
 
-            var optimizer = new SimulatedAnnealingOptimizer<TConstants>(
+            var optimizer = new CmaEsOptimizer<TConstants>(
                 (constants, values) => evaluator.Evaluate(constants, scores, target, selectedParameters, values),
                 selectedParameters, baseConstants, config);
 

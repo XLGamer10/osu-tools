@@ -85,9 +85,9 @@ namespace PerformanceCalculatorGUI.Screens
         private readonly Dictionary<DifficultyTuningParameter<OsuDifficultyConstants>, AutobalanceParameterState> autobalanceParameterStates
             = new Dictionary<DifficultyTuningParameter<OsuDifficultyConstants>, AutobalanceParameterState>();
         private bool autobalanceRunning;
-        private LimitedLabelledNumberBox saIterationsBox = null!;
-        private LimitedLabelledNumberBox saRestartsBox = null!;
-        private LimitedLabelledNumberBox saSeedBox = null!;
+        private LimitedLabelledNumberBox generationsBox = null!;
+        private LimitedLabelledNumberBox restartsBox = null!;
+        private LimitedLabelledNumberBox seedBox = null!;
         private AutobalanceRunner autobalanceRunner = null!;
 
         private VerboseLoadingLayer loadingLayer = null!;
@@ -324,19 +324,19 @@ namespace PerformanceCalculatorGUI.Screens
                                 {
                                     new Drawable[]
                                     {
-                                        saIterationsBox = new LimitedLabelledNumberBox
+                                        generationsBox = new LimitedLabelledNumberBox
                                         {
-                                            Label = "Iterations",
-                                            PlaceholderText = "5000",
+                                            Label = "Generations",
+                                            PlaceholderText = "300",
                                             MinValue = 0,
                                         },
-                                        saRestartsBox = new LimitedLabelledNumberBox
+                                        restartsBox = new LimitedLabelledNumberBox
                                         {
                                             Label = "Restarts",
-                                            PlaceholderText = "1",
+                                            PlaceholderText = "3",
                                             MinValue = 0,
                                         },
-                                        saSeedBox = new LimitedLabelledNumberBox
+                                        seedBox = new LimitedLabelledNumberBox
                                         {
                                             Label = "Seed",
                                             PlaceholderText = "42",
@@ -870,14 +870,14 @@ namespace PerformanceCalculatorGUI.Screens
             var collection = currentCollection.Value;
             var target = autobalanceTarget.Value;
 
-            var saConfig = new SAConfig
+            var optimizerConfig = new OptimizerConfig
             {
-                Iterations = saIterationsBox.Value.Value > 0 ? saIterationsBox.Value.Value : 5000,
-                Restarts = saRestartsBox.Value.Value > 0 ? saRestartsBox.Value.Value : 1,
-                Seed = saSeedBox.Value.Value > 0 ? saSeedBox.Value.Value : 42,
+                MaxGenerations = generationsBox.Value.Value > 0 ? generationsBox.Value.Value : 300,
+                Restarts = restartsBox.Value.Value > 0 ? restartsBox.Value.Value : 3,
+                Seed = seedBox.Value.Value > 0 ? seedBox.Value.Value : 42,
             };
 
-            autobalanceRunner.RunOsuAsync(collection, target, selectedParameters, tuningManager.Current.Value, config: saConfig, progress: onAutobalanceProgress)
+            autobalanceRunner.RunOsuAsync(collection, target, selectedParameters, tuningManager.Current.Value, config: optimizerConfig, progress: onAutobalanceProgress)
                              .ContinueWith(handleAutobalanceResult, TaskContinuationOptions.None);
         }
 
