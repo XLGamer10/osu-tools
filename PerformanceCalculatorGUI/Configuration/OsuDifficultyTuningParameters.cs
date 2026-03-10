@@ -16,8 +16,7 @@ namespace PerformanceCalculatorGUI.Configuration
         {
             new DifficultyTuningSection<OsuDifficultyConstants>("Performance scales",
                 doubleParam(nameof(OsuDifficultyConstants.AccuracyPerformanceScale), c => c.AccuracyPerformanceScale, (c, v) => c with { AccuracyPerformanceScale = v }, defaultEnabled: false),
-                doubleParam(nameof(OsuDifficultyConstants.TotalPerformanceScale), c => c.TotalPerformanceScale, (c, v) => c with { TotalPerformanceScale = v }, defaultEnabled: false),
-                doubleParam(nameof(OsuDifficultyConstants.CognitionPerformanceExponent), c => c.CognitionPerformanceExponent, (c, v) => c with { CognitionPerformanceExponent = v }, defaultEnabled: false)
+                doubleParam(nameof(OsuDifficultyConstants.TotalPerformanceScale), c => c.TotalPerformanceScale, (c, v) => c with { TotalPerformanceScale = v }, defaultEnabled: false)
             ),
             new DifficultyTuningSection<OsuDifficultyConstants>("Aim skill",
                 doubleParam(nameof(OsuDifficultyConstants.AimSkillMultiplierSnap), c => c.AimSkillMultiplierSnap, (c, v) => c with { AimSkillMultiplierSnap = v }),
