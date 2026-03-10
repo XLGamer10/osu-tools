@@ -86,6 +86,9 @@ namespace PerformanceCalculatorGUI.Screens.Collections.Autobalance
                 var bestEval = currentEval;
 
                 double temperature = config.InitialTemperature;
+                double coolingRate = config.Iterations > 1
+                    ? Math.Pow(config.MinTemperature / config.InitialTemperature, 1.0 / (config.Iterations - 1))
+                    : config.CoolingRate;
 
                 for (int iteration = 0; iteration < config.Iterations && temperature > config.MinTemperature; iteration++)
                 {
@@ -115,7 +118,7 @@ namespace PerformanceCalculatorGUI.Screens.Collections.Autobalance
                         }
                     }
 
-                    temperature *= config.CoolingRate;
+                    temperature *= coolingRate;
                     iterationsDone++;
                     progressCallback?.Invoke((double)iterationsDone / totalIterations);
                 }
