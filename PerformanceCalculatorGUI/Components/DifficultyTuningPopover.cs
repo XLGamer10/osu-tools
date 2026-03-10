@@ -49,6 +49,7 @@ namespace PerformanceCalculatorGUI.Components
             : base(false)
         {
             this.current = current;
+            this.current = current.GetBoundCopy();
             this.defaultConstants = defaultConstants;
             this.rulesetLabel = rulesetLabel;
             this.presetFileName = presetFileName;
