@@ -328,22 +328,19 @@ namespace PerformanceCalculatorGUI.Screens
                                         {
                                             Label = "Iterations",
                                             PlaceholderText = "5000",
-                                            MinValue = 100,
-                                            MaxValue = 100000,
+                                            MinValue = 0,
                                         },
                                         saRestartsBox = new LimitedLabelledNumberBox
                                         {
                                             Label = "Restarts",
                                             PlaceholderText = "1",
-                                            MinValue = 1,
-                                            MaxValue = 20,
+                                            MinValue = 0,
                                         },
                                         saSeedBox = new LimitedLabelledNumberBox
                                         {
                                             Label = "Seed",
                                             PlaceholderText = "42",
                                             MinValue = 0,
-                                            MaxValue = 999999,
                                         },
                                     }
                                 }
