@@ -88,7 +88,7 @@ namespace PerformanceCalculatorGUI.Screens.Collections.Autobalance
 
                 double rmse = Math.Sqrt(weightedErrorSum / weightSum);
                 double spearman = validCount >= 2 ? ComputeSpearmanCorrelation(actuals, expecteds, validCount) : 0;
-                double loss = rmse * (2.0 - spearman);
+                double loss = rmse;
 
                 return new EvaluationResult(rmse, spearman, loss);
             }
