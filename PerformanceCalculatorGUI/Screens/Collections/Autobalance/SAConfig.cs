@@ -9,7 +9,7 @@ namespace PerformanceCalculatorGUI.Screens.Collections.Autobalance
         public double InitialTemperature { get; init; } = 100.0;
         public double MinTemperature { get; init; } = 0.001;
         public double CoolingRate { get; init; } = 0.999;
-        public int Restarts { get; init; } = 1;
+        public int Restarts { get; init; } = 5;
         public int Seed { get; init; } = 42;
 
         public static SAConfig Default => new SAConfig();

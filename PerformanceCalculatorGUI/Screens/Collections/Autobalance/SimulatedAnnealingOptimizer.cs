@@ -92,15 +92,17 @@ namespace PerformanceCalculatorGUI.Screens.Collections.Autobalance
 
                 for (int iteration = 0; iteration < config.Iterations && temperature > config.MinTemperature; iteration++)
                 {
-                    int paramIndex = random.Next(n);
-                    double range = (upperBounds[paramIndex] - lowerBounds[paramIndex]) * temperature / config.InitialTemperature;
-                    double perturbation = (random.NextDouble() * 2 - 1) * range;
-
                     double[] candidateValues = (double[])currentValues.Clone();
-                    candidateValues[paramIndex] = Math.Clamp(
-                        candidateValues[paramIndex] + perturbation,
-                        lowerBounds[paramIndex],
-                        upperBounds[paramIndex]);
+
+                    for (int p = 0; p < n; p++)
+                    {
+                        double range = (upperBounds[p] - lowerBounds[p]) * temperature / config.InitialTemperature;
+                        double perturbation = (random.NextDouble() * 2 - 1) * range;
+                        candidateValues[p] = Math.Clamp(
+                            candidateValues[p] + perturbation,
+                            lowerBounds[p],
+                            upperBounds[p]);
+                    }
 
                     var candidateEval = evaluate(baseConstants, candidateValues);
                     double delta = candidateEval.Loss - currentLoss;
@@ -139,7 +141,7 @@ namespace PerformanceCalculatorGUI.Screens.Collections.Autobalance
 
             for (int i = 0; i < values.Length; i++)
             {
-                double range = (upperBounds[i] - lowerBounds[i]) * 0.1;
+                double range = (upperBounds[i] - lowerBounds[i]) * 0.5;
                 double perturbation = (random.NextDouble() * 2 - 1) * range;
                 values[i] = Math.Clamp(initialValues[i] + perturbation, lowerBounds[i], upperBounds[i]);
             }
