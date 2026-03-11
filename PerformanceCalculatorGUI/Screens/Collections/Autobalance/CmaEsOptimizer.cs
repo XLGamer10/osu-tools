@@ -2,6 +2,7 @@
 // See the LICENCE file in the repository root for full licence text.
 
 using System;
+using osu.Framework.Logging;
 using PerformanceCalculatorGUI.Configuration;
 
 namespace PerformanceCalculatorGUI.Screens.Collections.Autobalance
@@ -79,9 +80,17 @@ namespace PerformanceCalculatorGUI.Screens.Collections.Autobalance
             int totalGenerations = config.MaxGenerations * config.Restarts;
             int generationsDone = 0;
 
+            Logger.Log($"[CMA-ES] {n} parameters, initial loss: {globalBestEval.Loss:F6} (RMSE: {globalBestEval.Rmse:F6})", LoggingTarget.Information);
+
+            for (int i = 0; i < n; i++)
+                Logger.Log($"[CMA-ES]   param[{i}] {parameters[i].PropertyName}: initial={initialValues[i]:F6}, bounds=[{lowerBounds[i]:F6}, {upperBounds[i]:F6}]", LoggingTarget.Information);
+
             for (int restart = 0; restart < config.Restarts; restart++)
             {
+                Logger.Log($"[CMA-ES] === Restart {restart + 1}/{config.Restarts} ===", LoggingTarget.Information);
                 var result = runCmaEs(n, initialValues, lowerBounds, upperBounds, restart, ref generationsDone, totalGenerations, progressCallback);
+
+                Logger.Log($"[CMA-ES] Restart {restart + 1} best loss: {result.BestEvaluation.Loss:F6}", LoggingTarget.Information);
 
                 if (result.BestEvaluation.Loss < globalBestEval.Loss)
                 {
@@ -89,6 +98,11 @@ namespace PerformanceCalculatorGUI.Screens.Collections.Autobalance
                     Array.Copy(result.BestValues, globalBestValues, n);
                 }
             }
+
+            Logger.Log($"[CMA-ES] Final best loss: {globalBestEval.Loss:F6} (RMSE: {globalBestEval.Rmse:F6})", LoggingTarget.Information);
+
+            for (int i = 0; i < n; i++)
+                Logger.Log($"[CMA-ES]   param[{i}] {parameters[i].PropertyName}: {initialValues[i]:F6} -> {globalBestValues[i]:F6}", LoggingTarget.Information);
 
             return (globalBestValues, globalBestEval);
         }
@@ -258,6 +272,20 @@ namespace PerformanceCalculatorGUI.Screens.Collections.Autobalance
 
                 // Sort by fitness (ascending = better)
                 Array.Sort(fitness, (a, b) => a.loss.CompareTo(b.loss));
+
+                int penaltyCount = 0;
+
+                for (int k = 0; k < lambda; k++)
+                {
+                    if (fitness[k].loss >= 1e11)
+                        penaltyCount++;
+                }
+
+                if (gen % 10 == 0 || gen < 5)
+                {
+                    Logger.Log($"[CMA-ES] gen {gen}: best={fitness[0].loss:F4} worst={fitness[lambda - 1].loss:F4} "
+                               + $"sigma={sigma:F6} bestEver={bestLoss:F4} penalties={penaltyCount}/{lambda}", LoggingTarget.Information);
+                }
 
                 // --- Update mean ---
                 Array.Copy(mean, oldMean, n);

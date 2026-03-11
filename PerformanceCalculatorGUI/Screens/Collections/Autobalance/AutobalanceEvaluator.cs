@@ -4,6 +4,7 @@
 using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
+using osu.Framework.Logging;
 using osu.Game.Beatmaps;
 using osu.Game.Rulesets.Difficulty;
 using osu.Game.Rulesets.Osu.Difficulty;
@@ -92,8 +93,9 @@ namespace PerformanceCalculatorGUI.Screens.Collections.Autobalance
 
                 return new EvaluationResult(rmse, spearman, loss);
             }
-            catch
+            catch (Exception ex)
             {
+                Logger.Log($"[Evaluator] Exception during evaluation: {ex.GetType().Name}: {ex.Message}", LoggingTarget.Information);
                 return new EvaluationResult(big_penalty, 0, big_penalty);
             }
         }
