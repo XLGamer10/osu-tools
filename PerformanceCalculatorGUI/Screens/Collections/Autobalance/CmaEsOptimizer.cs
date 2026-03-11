@@ -9,7 +9,8 @@ namespace PerformanceCalculatorGUI.Screens.Collections.Autobalance
 {
     /// <summary>
     /// CMA-ES (Covariance Matrix Adaptation Evolution Strategy) optimizer.
-    /// Adapts a full covariance matrix to learn parameter correlations and scale.
+    /// All internal optimization is performed in [0,1]-normalized space to handle
+    /// parameters with vastly different scales.
     /// Reference: Hansen &amp; Ostermeier, "Completely Derandomized Self-Adaptation in Evolution Strategies", 2001.
     /// </summary>
     public class CmaEsOptimizer<TConstants>
@@ -74,7 +75,13 @@ namespace PerformanceCalculatorGUI.Screens.Collections.Autobalance
                 upperBounds[i] = hi;
             }
 
-            // Run CMA-ES with restarts, keeping global best
+            // Convert initial values to normalized [0,1] space
+            double[] initialNorm = new double[n];
+
+            for (int i = 0; i < n; i++)
+                initialNorm[i] = toNormalized(initialValues[i], lowerBounds[i], upperBounds[i]);
+
+            // Run CMA-ES with restarts, keeping global best (in real space)
             double[] globalBestValues = (double[])initialValues.Clone();
             var globalBestEval = evaluate(baseConstants, initialValues);
             int totalGenerations = config.MaxGenerations * config.Restarts;
@@ -83,12 +90,12 @@ namespace PerformanceCalculatorGUI.Screens.Collections.Autobalance
             Logger.Log($"[CMA-ES] {n} parameters, initial loss: {globalBestEval.Loss:F6} (RMSE: {globalBestEval.Rmse:F6})", LoggingTarget.Information);
 
             for (int i = 0; i < n; i++)
-                Logger.Log($"[CMA-ES]   param[{i}] {parameters[i].PropertyName}: initial={initialValues[i]:F6}, bounds=[{lowerBounds[i]:F6}, {upperBounds[i]:F6}]", LoggingTarget.Information);
+                Logger.Log($"[CMA-ES]   param[{i}] {parameters[i].PropertyName}: initial={initialValues[i]:G6}, bounds=[{lowerBounds[i]:G6}, {upperBounds[i]:G6}]", LoggingTarget.Information);
 
             for (int restart = 0; restart < config.Restarts; restart++)
             {
                 Logger.Log($"[CMA-ES] === Restart {restart + 1}/{config.Restarts} ===", LoggingTarget.Information);
-                var result = runCmaEs(n, initialValues, lowerBounds, upperBounds, restart, ref generationsDone, totalGenerations, progressCallback);
+                var result = runCmaEs(n, initialNorm, lowerBounds, upperBounds, restart, ref generationsDone, totalGenerations, progressCallback);
 
                 Logger.Log($"[CMA-ES] Restart {restart + 1} best loss: {result.BestEvaluation.Loss:F6}", LoggingTarget.Information);
 
@@ -102,13 +109,13 @@ namespace PerformanceCalculatorGUI.Screens.Collections.Autobalance
             Logger.Log($"[CMA-ES] Final best loss: {globalBestEval.Loss:F6} (RMSE: {globalBestEval.Rmse:F6})", LoggingTarget.Information);
 
             for (int i = 0; i < n; i++)
-                Logger.Log($"[CMA-ES]   param[{i}] {parameters[i].PropertyName}: {initialValues[i]:F6} -> {globalBestValues[i]:F6}", LoggingTarget.Information);
+                Logger.Log($"[CMA-ES]   param[{i}] {parameters[i].PropertyName}: {initialValues[i]:G6} -> {globalBestValues[i]:G6}", LoggingTarget.Information);
 
             return (globalBestValues, globalBestEval);
         }
 
         private (double[] BestValues, EvaluationResult BestEvaluation) runCmaEs(
-            int n, double[] initialValues, double[] lowerBounds, double[] upperBounds,
+            int n, double[] initialNorm, double[] lowerBounds, double[] upperBounds,
             int restart, ref int generationsDone, int totalGenerations, Action<double>? progressCallback)
         {
             var random = new Random(config.Seed + restart);
@@ -149,41 +156,27 @@ namespace PerformanceCalculatorGUI.Screens.Collections.Autobalance
             double damps = 1.0 + 2.0 * Math.Max(0, Math.Sqrt((muEff - 1.0) / (n + 1.0)) - 1.0) + cs;
             double chiN = Math.Sqrt(n) * (1.0 - 1.0 / (4.0 * n) + 1.0 / (21.0 * n * n));
 
-            // --- State variables ---
+            // --- State variables (all in normalized [0,1] space) ---
             double[] mean = new double[n];
 
             if (restart == 0)
             {
-                Array.Copy(initialValues, mean, n);
+                Array.Copy(initialNorm, mean, n);
             }
             else
             {
                 for (int i = 0; i < n; i++)
-                {
-                    double range = (upperBounds[i] - lowerBounds[i]) * 0.5;
-                    mean[i] = Math.Clamp(initialValues[i] + (random.NextDouble() * 2 - 1) * range, lowerBounds[i], upperBounds[i]);
-                }
+                    mean[i] = Math.Clamp(initialNorm[i] + (random.NextDouble() * 2 - 1) * 0.5, 0.0, 1.0);
             }
 
-            // Initial step size: fraction of average range
-            double sigma = config.InitialSigma;
-
-            if (sigma <= 0)
-            {
-                double avgRange = 0;
-
-                for (int i = 0; i < n; i++)
-                    avgRange += upperBounds[i] - lowerBounds[i];
-
-                avgRange /= n;
-                sigma = avgRange * 0.3;
-            }
+            // Initial step size in normalized space — 0.3 is a good default for [0,1]
+            double sigma = config.InitialSigma > 0 ? config.InitialSigma : 0.3;
 
             // Covariance matrix C = I (stored as flat array, row-major)
-            double[] c = new double[n * n];
+            double[] covMatrix = new double[n * n];
 
             for (int i = 0; i < n; i++)
-                c[i * n + i] = 1.0;
+                covMatrix[i * n + i] = 1.0;
 
             // Evolution path for C
             double[] pc = new double[n];
@@ -203,19 +196,21 @@ namespace PerformanceCalculatorGUI.Screens.Collections.Autobalance
                 invsqrtC[i * n + i] = 1.0;
             }
 
-            // Best solution tracking
-            double[] bestValues = (double[])mean.Clone();
-            var bestEval = evaluate(baseConstants, mean);
+            // Best solution tracking (in real space)
+            double[] bestRealValues = new double[n];
+            denormalizeInto(mean, lowerBounds, upperBounds, bestRealValues);
+            var bestEval = evaluate(baseConstants, bestRealValues);
             double bestLoss = bestEval.Loss;
 
             // Workspace arrays
-            double[][] population = new double[lambda][];
+            double[][] populationNorm = new double[lambda][];
             double[][] z = new double[lambda][];
+            double[] candidateReal = new double[n];
             var fitness = new (double loss, int index)[lambda];
 
             for (int k = 0; k < lambda; k++)
             {
-                population[k] = new double[n];
+                populationNorm[k] = new double[n];
                 z[k] = new double[n];
             }
 
@@ -230,21 +225,21 @@ namespace PerformanceCalculatorGUI.Screens.Collections.Autobalance
                 // Update eigendecomposition if needed
                 if (eigenDirty || generationsSinceEigen >= eigenUpdateInterval)
                 {
-                    updateEigenDecomposition(n, c, eigenvalues, eigenvectors, invsqrtC);
+                    updateEigenDecomposition(n, covMatrix, eigenvalues, eigenvectors, invsqrtC);
                     eigenDirty = false;
                     generationsSinceEigen = 0;
                 }
 
                 generationsSinceEigen++;
 
-                // --- Sample population ---
+                // --- Sample population in normalized space ---
                 for (int k = 0; k < lambda; k++)
                 {
                     // Sample z ~ N(0, I)
                     for (int i = 0; i < n; i++)
                         z[k][i] = sampleGaussian(random);
 
-                    // Transform: x = mean + sigma * B * D * z
+                    // Transform: x_norm = mean + sigma * B * D * z, clamped to [0, 1]
                     for (int i = 0; i < n; i++)
                     {
                         double sum = 0;
@@ -252,21 +247,22 @@ namespace PerformanceCalculatorGUI.Screens.Collections.Autobalance
                         for (int j = 0; j < n; j++)
                             sum += eigenvectors[i * n + j] * Math.Sqrt(Math.Max(0, eigenvalues[j])) * z[k][j];
 
-                        population[k][i] = Math.Clamp(mean[i] + sigma * sum, lowerBounds[i], upperBounds[i]);
+                        populationNorm[k][i] = Math.Clamp(mean[i] + sigma * sum, 0.0, 1.0);
                     }
                 }
 
-                // --- Evaluate population ---
+                // --- Evaluate population (convert to real space for evaluation) ---
                 for (int k = 0; k < lambda; k++)
                 {
-                    var eval = evaluate(baseConstants, population[k]);
+                    denormalizeInto(populationNorm[k], lowerBounds, upperBounds, candidateReal);
+                    var eval = evaluate(baseConstants, candidateReal);
                     fitness[k] = (eval.Loss, k);
 
                     if (eval.Loss < bestLoss)
                     {
                         bestLoss = eval.Loss;
                         bestEval = eval;
-                        Array.Copy(population[k], bestValues, n);
+                        denormalizeInto(populationNorm[k], lowerBounds, upperBounds, bestRealValues);
                     }
                 }
 
@@ -287,7 +283,7 @@ namespace PerformanceCalculatorGUI.Screens.Collections.Autobalance
                                + $"sigma={sigma:F6} bestEver={bestLoss:F4} penalties={penaltyCount}/{lambda}", LoggingTarget.Information);
                 }
 
-                // --- Update mean ---
+                // --- Update mean (in normalized space) ---
                 Array.Copy(mean, oldMean, n);
 
                 for (int i = 0; i < n; i++)
@@ -295,7 +291,7 @@ namespace PerformanceCalculatorGUI.Screens.Collections.Autobalance
                     mean[i] = 0;
 
                     for (int k = 0; k < mu; k++)
-                        mean[i] += weights[k] * population[fitness[k].index][i];
+                        mean[i] += weights[k] * populationNorm[fitness[k].index][i];
                 }
 
                 // --- Update evolution paths ---
@@ -342,19 +338,19 @@ namespace PerformanceCalculatorGUI.Screens.Collections.Autobalance
                 {
                     for (int j = 0; j <= i; j++)
                     {
-                        double val = oldWeight * c[i * n + j]
+                        double val = oldWeight * covMatrix[i * n + j]
                                      + c1 * pc[i] * pc[j];
 
                         for (int k = 0; k < mu; k++)
                         {
                             int idx = fitness[k].index;
-                            double yi = (population[idx][i] - oldMean[i]) / sigma;
-                            double yj = (population[idx][j] - oldMean[j]) / sigma;
+                            double yi = (populationNorm[idx][i] - oldMean[i]) / sigma;
+                            double yj = (populationNorm[idx][j] - oldMean[j]) / sigma;
                             val += cmu * weights[k] * yi * yj;
                         }
 
-                        c[i * n + j] = val;
-                        c[j * n + i] = val; // symmetric
+                        covMatrix[i * n + j] = val;
+                        covMatrix[j * n + i] = val; // symmetric
                     }
                 }
 
@@ -362,26 +358,10 @@ namespace PerformanceCalculatorGUI.Screens.Collections.Autobalance
 
                 // --- Update step size ---
                 sigma *= Math.Exp(cs / damps * (psNorm / chiN - 1.0));
-
-                // Clamp sigma to prevent explosion
-                double maxSigma = 0;
-
-                for (int i = 0; i < n; i++)
-                    maxSigma = Math.Max(maxSigma, upperBounds[i] - lowerBounds[i]);
-
-                sigma = Math.Min(sigma, maxSigma);
-                sigma = Math.Max(sigma, 1e-20);
+                sigma = Math.Clamp(sigma, 1e-20, 1e3);
 
                 // --- Check termination ---
-                // Stop if sigma is tiny relative to the search range
-                double avgRange2 = 0;
-
-                for (int i = 0; i < n; i++)
-                    avgRange2 += upperBounds[i] - lowerBounds[i];
-
-                avgRange2 /= n;
-
-                if (sigma < avgRange2 * 1e-12)
+                if (sigma < 1e-12)
                     break;
 
                 // Stop if condition number of C is too large
@@ -400,7 +380,23 @@ namespace PerformanceCalculatorGUI.Screens.Collections.Autobalance
                 progressCallback?.Invoke((double)generationsDone / totalGenerations);
             }
 
-            return (bestValues, bestEval);
+            return (bestRealValues, bestEval);
+        }
+
+        private static double toNormalized(double value, double lo, double hi)
+        {
+            double range = hi - lo;
+
+            if (range <= 0)
+                return 0.5;
+
+            return (value - lo) / range;
+        }
+
+        private static void denormalizeInto(double[] normalized, double[] lowerBounds, double[] upperBounds, double[] output)
+        {
+            for (int i = 0; i < normalized.Length; i++)
+                output[i] = lowerBounds[i] + normalized[i] * (upperBounds[i] - lowerBounds[i]);
         }
 
         /// <summary>
@@ -409,7 +405,7 @@ namespace PerformanceCalculatorGUI.Screens.Collections.Autobalance
         /// </summary>
         private static void updateEigenDecomposition(int n, double[] c, double[] eigenvalues, double[] eigenvectors, double[] invsqrtC)
         {
-            // Copy C to eigenvectors (will be overwritten by Jacobi)
+            // Copy C to working matrix
             double[] matrix = new double[n * n];
             Array.Copy(c, matrix, n * n);
 
