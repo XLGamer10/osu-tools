@@ -28,6 +28,7 @@ namespace PerformanceCalculatorGUI.Screens.Collections.Autobalance
         public Task<AutobalanceResult<OsuDifficultyConstants>> RunOsuAsync(Collection collection, AutobalanceTarget target,
                                                                            DifficultyTuningParameter<OsuDifficultyConstants>[] selectedParameters,
                                                                            OsuDifficultyConstants baseConstants,
+                                                                           OptimizerType optimizerType = OptimizerType.CmaEs,
                                                                            OptimizerConfig? config = null,
                                                                            Action<AutobalanceProgress>? progress = null)
         {
@@ -37,7 +38,7 @@ namespace PerformanceCalculatorGUI.Screens.Collections.Autobalance
                 (tuning, working) => new OsuDifficultyCalculator(osuRuleset.RulesetInfo, working, tuning),
                 () => osuRuleset.CreatePerformanceCalculator()!,
                 AutobalanceEvaluator<OsuDifficultyConstants>.GetOsuTargetValueFunc(),
-                config, progress);
+                optimizerType, config, progress);
         }
 
         public async Task<AutobalanceResult<TConstants>> RunAsync<TConstants>(
@@ -47,6 +48,7 @@ namespace PerformanceCalculatorGUI.Screens.Collections.Autobalance
             Func<TConstants, IWorkingBeatmap, DifficultyCalculator> createDifficultyCalculator,
             Func<PerformanceCalculator> createPerformanceCalculator,
             Func<PerformanceAttributes?, AutobalanceTarget, double?> getTargetValue,
+            OptimizerType optimizerType = OptimizerType.CmaEs,
             OptimizerConfig? config = null,
             Action<AutobalanceProgress>? progress = null)
         {
@@ -77,12 +79,17 @@ namespace PerformanceCalculatorGUI.Screens.Collections.Autobalance
 
             progress?.Invoke(new AutobalanceProgress(dataset_progress_portion, "Optimizing..."));
 
-            var optimizer = new CmaEsOptimizer<TConstants>(
-                (constants, values) => evaluator.Evaluate(constants, scores, target, selectedParameters, values),
-                selectedParameters, baseConstants, config);
+            Func<TConstants, double[], EvaluationResult> evalFunc =
+                (constants, values) => evaluator.Evaluate(constants, scores, target, selectedParameters, values);
+
+            Func<Action<double>?, (double[] BestValues, EvaluationResult BestEvaluation)> runOptimizer = optimizerType switch
+            {
+                OptimizerType.NelderMead => new NelderMeadOptimizer<TConstants>(evalFunc, selectedParameters, baseConstants, config).Run,
+                _ => new CmaEsOptimizer<TConstants>(evalFunc, selectedParameters, baseConstants, config).Run,
+            };
 
             var (bestValues, bestEvaluation) = await Task.Run(() =>
-                optimizer.Run(optProgress =>
+                runOptimizer(optProgress =>
                 {
                     double combined = dataset_progress_portion + (1.0 - dataset_progress_portion) * optProgress;
                     progress?.Invoke(new AutobalanceProgress(combined));

@@ -85,6 +85,7 @@ namespace PerformanceCalculatorGUI.Screens
         private readonly Dictionary<DifficultyTuningParameter<OsuDifficultyConstants>, AutobalanceParameterState> autobalanceParameterStates
             = new Dictionary<DifficultyTuningParameter<OsuDifficultyConstants>, AutobalanceParameterState>();
         private bool autobalanceRunning;
+        private readonly Bindable<OptimizerType> optimizerType = new Bindable<OptimizerType>(OptimizerType.CmaEs);
         private LimitedLabelledNumberBox generationsBox = null!;
         private LimitedLabelledNumberBox restartsBox = null!;
         private LimitedLabelledNumberBox seedBox = null!;
@@ -304,10 +305,15 @@ namespace PerformanceCalculatorGUI.Screens
                             },
                             new OsuSpriteText
                             {
-                                Text = "SA Settings",
+                                Text = "Optimizer Settings",
                                 Font = OsuFont.GetFont(size: 12, weight: FontWeight.SemiBold),
                                 Colour = colourProvider.Light2,
                                 Margin = new MarginPadding { Top = 6 }
+                            },
+                            new OverlaySortTabControl<OptimizerType>
+                            {
+                                Title = "Optimizer",
+                                Current = { BindTarget = optimizerType }
                             },
                             new GridContainer
                             {
@@ -877,7 +883,7 @@ namespace PerformanceCalculatorGUI.Screens
                 Seed = seedBox.Value.Value > 0 ? seedBox.Value.Value : 42,
             };
 
-            autobalanceRunner.RunOsuAsync(collection, target, selectedParameters, tuningManager.Current.Value, config: optimizerConfig, progress: onAutobalanceProgress)
+            autobalanceRunner.RunOsuAsync(collection, target, selectedParameters, tuningManager.Current.Value, optimizerType.Value, config: optimizerConfig, progress: onAutobalanceProgress)
                              .ContinueWith(handleAutobalanceResult, TaskContinuationOptions.None);
         }
 
