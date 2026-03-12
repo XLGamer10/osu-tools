@@ -17,7 +17,7 @@ Difficulty and performance calculators for all rulesets may be modified to tweak
 
 ### Help
 
-Run:
+Run
 
 ```
 > dotnet run -- --help
