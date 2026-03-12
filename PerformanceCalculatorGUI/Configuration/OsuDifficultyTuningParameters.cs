@@ -24,7 +24,9 @@ namespace PerformanceCalculatorGUI.Configuration
                 doubleParam(nameof(OsuDifficultyConstants.AimSkillMultiplierFlow), c => c.AimSkillMultiplierFlow, (c, v) => c with { AimSkillMultiplierFlow = v }),
                 doubleParam(nameof(OsuDifficultyConstants.AimSkillMultiplierTotal), c => c.AimSkillMultiplierTotal, (c, v) => c with { AimSkillMultiplierTotal = v }),
                 doubleParam(nameof(OsuDifficultyConstants.AimMeanExponent), c => c.AimMeanExponent, (c, v) => c with { AimMeanExponent = v }),
-                doubleParam(nameof(OsuDifficultyConstants.AimStrainDecayBase), c => c.AimStrainDecayBase, (c, v) => c with { AimStrainDecayBase = v })
+                doubleParam(nameof(OsuDifficultyConstants.AimStrainDecayBase), c => c.AimStrainDecayBase, (c, v) => c with { AimStrainDecayBase = v }),
+                intParam(nameof(OsuDifficultyConstants.AimReducedSectionCount), c => c.AimReducedSectionCount, (c, v) => c with { AimReducedSectionCount = v }, defaultEnabled: false),
+                doubleParam(nameof(OsuDifficultyConstants.AimReducedStrainBaseline), c => c.AimReducedStrainBaseline, (c, v) => c with { AimReducedStrainBaseline = v }, defaultEnabled: false)
             ),
             new DifficultyTuningSection<OsuDifficultyConstants>("Speed skill",
                 doubleParam(nameof(OsuDifficultyConstants.SpeedSkillMultiplier), c => c.SpeedSkillMultiplier, (c, v) => c with { SpeedSkillMultiplier = v }),
@@ -69,7 +71,14 @@ namespace PerformanceCalculatorGUI.Configuration
                 intParam(nameof(OsuDifficultyConstants.RhythmHistoryTimeMax), c => c.RhythmHistoryTimeMax, (c, v) => c with { RhythmHistoryTimeMax = v }, defaultEnabled: false),
                 intParam(nameof(OsuDifficultyConstants.RhythmHistoryObjectsMax), c => c.RhythmHistoryObjectsMax, (c, v) => c with { RhythmHistoryObjectsMax = v }, defaultEnabled: false),
                 doubleParam(nameof(OsuDifficultyConstants.RhythmOverallScale), c => c.RhythmOverallScale, (c, v) => c with { RhythmOverallScale = v }),
-                doubleParam(nameof(OsuDifficultyConstants.RhythmRatioScale), c => c.RhythmRatioScale, (c, v) => c with { RhythmRatioScale = v })
+                doubleParam(nameof(OsuDifficultyConstants.RhythmRatioScale), c => c.RhythmRatioScale, (c, v) => c with { RhythmRatioScale = v }),
+                doubleParam(nameof(OsuDifficultyConstants.RhythmSliderIntoNerf), c => c.RhythmSliderIntoNerf, (c, v) => c with { RhythmSliderIntoNerf = v }, defaultEnabled: false),
+                doubleParam(nameof(OsuDifficultyConstants.RhythmRepeatPolarityNerf), c => c.RhythmRepeatPolarityNerf, (c, v) => c with { RhythmRepeatPolarityNerf = v }, defaultEnabled: false),
+                doubleParam(nameof(OsuDifficultyConstants.RhythmSpeedupConsecutiveNerf), c => c.RhythmSpeedupConsecutiveNerf, (c, v) => c with { RhythmSpeedupConsecutiveNerf = v }, defaultEnabled: false),
+                doubleParam(nameof(OsuDifficultyConstants.RhythmRepeatIslandSizeNerf), c => c.RhythmRepeatIslandSizeNerf, (c, v) => c with { RhythmRepeatIslandSizeNerf = v }, defaultEnabled: false),
+                doubleParam(nameof(OsuDifficultyConstants.RhythmDoubletapScale), c => c.RhythmDoubletapScale, (c, v) => c with { RhythmDoubletapScale = v }, defaultEnabled: false),
+                doubleParam(nameof(OsuDifficultyConstants.RhythmSpeedupSliderIntoNerf), c => c.RhythmSpeedupSliderIntoNerf, (c, v) => c with { RhythmSpeedupSliderIntoNerf = v }, defaultEnabled: false),
+                doubleParam(nameof(OsuDifficultyConstants.RhythmSpeedupSliderFromNerf), c => c.RhythmSpeedupSliderFromNerf, (c, v) => c with { RhythmSpeedupSliderFromNerf = v }, defaultEnabled: false)
             ),
             new DifficultyTuningSection<OsuDifficultyConstants>("Reading tuning",
                 doubleParam(nameof(OsuDifficultyConstants.ReadingWindowSize), c => c.ReadingWindowSize, (c, v) => c with { ReadingWindowSize = v }, defaultEnabled: false),
