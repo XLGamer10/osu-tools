@@ -134,10 +134,11 @@ namespace PerformanceCalculatorGUI.Screens.ObjectInspection
                 new ObjectInspectorDifficultyValue("Adjusted Delta Time", hitObject.AdjustedDeltaTime),
                 new ObjectInspectorDifficultyValue("Last Obj End Delta Time", hitObject.LastObjectEndDeltaTime),
                 new ObjectInspectorDifficultyValue("Doubletapness", hitObject.GetDoubletapness((OsuDifficultyHitObject)hitObject.Next(0))),
-                new ObjectInspectorDifficultyValue("Jump Distance", hitObject.JumpDistance),
-                new ObjectInspectorDifficultyValue("Lazy Jump Dist", hitObject.LazyJumpDistance),
-                new ObjectInspectorDifficultyValue("Min Jump Dist", hitObject.MinimumJumpDistance),
-                new ObjectInspectorDifficultyValue("Min Jump Time", hitObject.MinimumJumpTime),
+                new ObjectInspectorDifficultyValue("Tail Jump Dist", hitObject.TailJumpDistance),
+                new ObjectInspectorDifficultyValue("Slider Body Dist", hitObject.SliderBodyDistance),
+                new ObjectInspectorDifficultyValue("Slider Bonus Dist", hitObject.SliderBonusDistance),
+                new ObjectInspectorDifficultyValue("Slider Travel Time", hitObject.SliderTravelTime),
+                new ObjectInspectorDifficultyValue("Tail Delta Time", hitObject.TailDeltaTime),
 
                 new ObjectInspectorDifficultyValue("Snap Aim Difficulty", SnapAimEvaluator.EvaluateDifficultyOf(hitObject, true, true)),
                 new ObjectInspectorDifficultyValue("Snap Aim Difficulty (w/o sliders)", SnapAimEvaluator.EvaluateDifficultyOf(hitObject, false, true)),
@@ -145,7 +146,7 @@ namespace PerformanceCalculatorGUI.Screens.ObjectInspection
                 new ObjectInspectorDifficultyValue("Flow Aim Difficulty (w/o sliders)", FlowAimEvaluator.EvaluateDifficultyOf(hitObject, false, true)),
                 new ObjectInspectorDifficultyValue("Agility Difficulty", AgilityEvaluator.EvaluateDifficultyOf(hitObject, true)),
                 new ObjectInspectorDifficultyValue("Speed Difficulty", SpeedEvaluator.EvaluateDifficultyOf(hitObject)),
-                new ObjectInspectorDifficultyValue("Rhythm Difficulty", osu.Game.Rulesets.Osu.Difficulty.Evaluators.Speed.RhythmEvaluator.EvaluateDifficultyOf(hitObject)),
+                new ObjectInspectorDifficultyValue("Rhythm Difficulty", FingerControlEvaluator.EvaluateDifficultyOf(hitObject)),
                 new ObjectInspectorDifficultyValue("Reading Difficulty", osu.Game.Rulesets.Osu.Difficulty.Evaluators.ReadingEvaluator.EvaluateDifficultyOf(hitObject, hidden)),
                 new ObjectInspectorDifficultyValue(hidden ? "FLHD Difficulty" : "Flashlight Diff", FlashlightEvaluator.EvaluateDifficultyOf(hitObject, appliedMods.Value)),
             });
@@ -164,10 +165,11 @@ namespace PerformanceCalculatorGUI.Screens.ObjectInspection
                         RelativeSizeAxes = Axes.X,
                         Alpha = 0.5f
                     },
-                    new ObjectInspectorDifficultyValue("Travel Time", hitObject.TravelTime),
-                    new ObjectInspectorDifficultyValue("Lazy Travel Time", hitObject.LazyTravelTime),
-                    new ObjectInspectorDifficultyValue("Travel Distance", hitObject.TravelDistance),
-                    new ObjectInspectorDifficultyValue("Lazy Travel Distance", hitObject.LazyTravelDistance)
+                    new ObjectInspectorDifficultyValue("Tail Jump Dist", hitObject.TailJumpDistance),
+                    new ObjectInspectorDifficultyValue("Slider Body Dist", hitObject.SliderBodyDistance),
+                    new ObjectInspectorDifficultyValue("Slider Bonus Dist", hitObject.SliderBonusDistance),
+                    new ObjectInspectorDifficultyValue("Slider Travel Time", hitObject.SliderTravelTime),
+                    new ObjectInspectorDifficultyValue("Tail Delta Time", hitObject.TailDeltaTime),
                 });
 
                 if (hitObject.LazyEndPosition != null)
