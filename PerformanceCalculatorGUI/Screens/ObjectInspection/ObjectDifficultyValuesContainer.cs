@@ -4,6 +4,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using osu.Framework.Allocation;
+using osu.Framework.Audio.Track;
 using osu.Framework.Bindables;
 using osu.Framework.Graphics;
 using osu.Framework.Graphics.Containers;
@@ -25,7 +26,6 @@ using osu.Game.Rulesets.Taiko.Difficulty.Evaluators;
 using osu.Game.Rulesets.Taiko.Difficulty.Preprocessing;
 using osu.Game.Rulesets.Taiko.Objects;
 using osuTK;
-using StaminaEvaluator = osu.Game.Rulesets.Taiko.Difficulty.Evaluators.StaminaEvaluator;
 
 namespace PerformanceCalculatorGUI.Screens.ObjectInspection
 {
@@ -33,6 +33,9 @@ namespace PerformanceCalculatorGUI.Screens.ObjectInspection
     {
         [Resolved]
         private Bindable<IReadOnlyList<Mod>> appliedMods { get; set; } = null!;
+
+        [Resolved]
+        private Track track { get; set; } = null!;
 
         private SpriteText hitObjectTypeText = null!;
 
