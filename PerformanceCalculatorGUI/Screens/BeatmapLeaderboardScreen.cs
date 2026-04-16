@@ -21,6 +21,7 @@ using osu.Game.Overlays;
 using osu.Game.Overlays.BeatmapSet.Scores;
 using osu.Game.Rulesets;
 using osu.Game.Rulesets.Mods;
+using osu.Game.Rulesets.Osu.Difficulty;
 using osu.Game.Scoring;
 using PerformanceCalculatorGUI.Components;
 using PerformanceCalculatorGUI.Components.TextBoxes;
@@ -60,6 +61,9 @@ namespace PerformanceCalculatorGUI.Screens
 
         [Resolved]
         private SettingsManager configManager { get; set; } = null!;
+
+        [Resolved]
+        private DifficultyTuningManager<OsuDifficultyConstants> tuningManager { get; set; } = null!;
 
         public override bool ShouldShowConfirmationDialogOnSwitch => false;
 
@@ -268,7 +272,7 @@ namespace PerformanceCalculatorGUI.Screens
 
                     var parsedScore = new ProcessorScoreDecoder(working).Parse(scoreInfo);
 
-                    var difficultyCalculator = rulesetInstance.CreateDifficultyCalculator(working);
+                    var difficultyCalculator = RulesetHelper.CreateTunedDifficultyCalculator(rulesetInstance.RulesetInfo, working, tuningManager);
 
                     Mod[] mods = score.Mods.Select(x => x.ToMod(rulesetInstance)).ToArray();
 

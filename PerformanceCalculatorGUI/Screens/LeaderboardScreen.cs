@@ -20,6 +20,7 @@ using osu.Game.Online.API.Requests.Responses;
 using osu.Game.Overlays;
 using osu.Game.Rulesets;
 using osu.Game.Rulesets.Mods;
+using osu.Game.Rulesets.Osu.Difficulty;
 using osu.Game.Users;
 using PerformanceCalculatorGUI.Components;
 using PerformanceCalculatorGUI.Components.TextBoxes;
@@ -74,6 +75,9 @@ namespace PerformanceCalculatorGUI.Screens
 
         [Resolved]
         private SettingsManager configManager { get; set; } = null!;
+
+        [Resolved]
+        private DifficultyTuningManager<OsuDifficultyConstants> tuningManager { get; set; } = null!;
 
         private const int settings_height = 40;
         private const int tabs_height = 20;
@@ -326,7 +330,7 @@ namespace PerformanceCalculatorGUI.Screens
 
                         var parsedScore = new ProcessorScoreDecoder(working).Parse(scoreInfo);
 
-                        var difficultyCalculator = rulesetInstance.CreateDifficultyCalculator(working);
+                        var difficultyCalculator = RulesetHelper.CreateTunedDifficultyCalculator(rulesetInstance.RulesetInfo, working, tuningManager);
                         var difficultyAttributes = difficultyCalculator.Calculate(mods);
                         var performanceCalculator = rulesetInstance.CreatePerformanceCalculator();
 

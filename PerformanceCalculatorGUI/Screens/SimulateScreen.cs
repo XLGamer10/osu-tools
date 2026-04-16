@@ -27,6 +27,7 @@ using osu.Game.Overlays;
 using osu.Game.Rulesets;
 using osu.Game.Rulesets.Difficulty;
 using osu.Game.Rulesets.Mods;
+using osu.Game.Rulesets.Osu.Difficulty;
 using osu.Game.Rulesets.Osu.Mods;
 using osu.Game.Rulesets.Scoring;
 using osu.Game.Scoring;
@@ -113,6 +114,9 @@ namespace PerformanceCalculatorGUI.Screens
 
         [Resolved]
         private APIManager apiManager { get; set; } = null!;
+
+        [Resolved]
+        private DifficultyTuningManager<OsuDifficultyConstants> tuningManager { get; set; } = null!;
 
         [Cached]
         private OverlayColourProvider colourProvider = new OverlayColourProvider(OverlayColourScheme.Blue);
@@ -559,6 +563,12 @@ namespace PerformanceCalculatorGUI.Screens
             appliedMods.BindValueChanged(modsChanged);
             modDisplay.Current.BindTo(appliedMods);
 
+            tuningManager.Current.BindValueChanged(_ =>
+            {
+                calculateDifficulty();
+                calculatePerformance();
+            });
+
             ruleset.BindValueChanged(_ =>
             {
                 resetCalculations();
@@ -709,7 +719,7 @@ namespace PerformanceCalculatorGUI.Screens
             try
             {
                 var rulesetInstance = ruleset.Value.CreateInstance();
-                var extendedDifficultyCalculator = RulesetHelper.GetExtendedDifficultyCalculator(ruleset.Value, working);
+                var extendedDifficultyCalculator = RulesetHelper.GetExtendedDifficultyCalculator(ruleset.Value, working, tuningManager.Current.Value);
                 performanceCalculator = rulesetInstance.CreatePerformanceCalculator();
 
                 difficultyAttributes = extendedDifficultyCalculator.Calculate(appliedMods.Value);
