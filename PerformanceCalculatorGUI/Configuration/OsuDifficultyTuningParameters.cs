@@ -14,8 +14,14 @@ namespace PerformanceCalculatorGUI.Configuration
     {
         public static readonly IReadOnlyList<DifficultyTuningSection<OsuDifficultyConstants>> Sections = new[]
         {
+            new DifficultyTuningSection<OsuDifficultyConstants>("Rating scales",
+                doubleParam(nameof(OsuDifficultyConstants.RatingAimExponent), c => c.RatingAimExponent, (c, v) => c with { RatingAimExponent = v }, defaultEnabled: false),
+                doubleParam(nameof(OsuDifficultyConstants.RatingAimMult), c => c.RatingAimMult, (c, v) => c with { RatingAimMult = v }, defaultEnabled: false)
+            ),
             new DifficultyTuningSection<OsuDifficultyConstants>("Performance scales",
-                doubleParam(nameof(OsuDifficultyConstants.AccuracyPerformanceScale), c => c.AccuracyPerformanceScale, (c, v) => c with { AccuracyPerformanceScale = v }, defaultEnabled: false),
+                doubleParam(nameof(OsuDifficultyConstants.AccuracyPerformanceExponent), c => c.AccuracyPerformanceExponent, (c, v) => c with { AccuracyPerformanceExponent = v }, defaultEnabled: false),
+                doubleParam(nameof(OsuDifficultyConstants.AccuracyPerformanceBase), c => c.AccuracyPerformanceBase, (c, v) => c with { AccuracyPerformanceBase = v }, defaultEnabled: false),
+                doubleParam(nameof(OsuDifficultyConstants.AccuracyPerformanceMult), c => c.AccuracyPerformanceMult, (c, v) => c with { AccuracyPerformanceMult = v }, defaultEnabled: false),
                 doubleParam(nameof(OsuDifficultyConstants.TotalPerformanceScale), c => c.TotalPerformanceScale, (c, v) => c with { TotalPerformanceScale = v }, defaultEnabled: false)
             ),
             new DifficultyTuningSection<OsuDifficultyConstants>("Aim skill",
@@ -23,20 +29,31 @@ namespace PerformanceCalculatorGUI.Configuration
                 doubleParam(nameof(OsuDifficultyConstants.AimSkillMultiplierAgility), c => c.AimSkillMultiplierAgility, (c, v) => c with { AimSkillMultiplierAgility = v }),
                 doubleParam(nameof(OsuDifficultyConstants.AimSkillMultiplierFlow), c => c.AimSkillMultiplierFlow, (c, v) => c with { AimSkillMultiplierFlow = v }),
                 doubleParam(nameof(OsuDifficultyConstants.AimSkillMultiplierTotal), c => c.AimSkillMultiplierTotal, (c, v) => c with { AimSkillMultiplierTotal = v }),
-                doubleParam(nameof(OsuDifficultyConstants.AimMeanExponent), c => c.AimMeanExponent, (c, v) => c with { AimMeanExponent = v }),
+                doubleParam(nameof(OsuDifficultyConstants.AimCombinedSnapNormExponent), c => c.AimCombinedSnapNormExponent, (c, v) => c with { AimCombinedSnapNormExponent = v }),
                 doubleParam(nameof(OsuDifficultyConstants.AimStrainDecayBase), c => c.AimStrainDecayBase, (c, v) => c with { AimStrainDecayBase = v }),
-                intParam(nameof(OsuDifficultyConstants.AimReducedSectionCount), c => c.AimReducedSectionCount, (c, v) => c with { AimReducedSectionCount = v }, defaultEnabled: false),
-                doubleParam(nameof(OsuDifficultyConstants.AimReducedStrainBaseline), c => c.AimReducedStrainBaseline, (c, v) => c with { AimReducedStrainBaseline = v }, defaultEnabled: false)
+                doubleParam(nameof(OsuDifficultyConstants.AimPreservedStrainDecayBase), c => c.AimPreservedStrainDecayBase, (c, v) => c with { AimPreservedStrainDecayBase = v }, defaultEnabled: false),
+                doubleParam(nameof(OsuDifficultyConstants.AimTimeThresholdMinutes), c => c.AimTimeThresholdMinutes, (c, v) => c with { AimTimeThresholdMinutes = v }, defaultEnabled: false),
+                doubleParam(nameof(OsuDifficultyConstants.AimMaxDeltaTime), c => c.AimMaxDeltaTime, (c, v) => c with { AimMaxDeltaTime = v }, defaultEnabled: false),
+                doubleParam(nameof(OsuDifficultyConstants.AimRetryCooldownTime), c => c.AimRetryCooldownTime, (c, v) => c with { AimRetryCooldownTime = v }, defaultEnabled: false)
             ),
             new DifficultyTuningSection<OsuDifficultyConstants>("Speed skill",
-                doubleParam(nameof(OsuDifficultyConstants.SpeedSkillMultiplier), c => c.SpeedSkillMultiplier, (c, v) => c with { SpeedSkillMultiplier = v }),
-                doubleParam(nameof(OsuDifficultyConstants.SpeedStrainDecayBase), c => c.SpeedStrainDecayBase, (c, v) => c with { SpeedStrainDecayBase = v }),
                 doubleParam(nameof(OsuDifficultyConstants.SpeedHarmonicScale), c => c.SpeedHarmonicScale, (c, v) => c with { SpeedHarmonicScale = v }),
-                doubleParam(nameof(OsuDifficultyConstants.SpeedDecayExponent), c => c.SpeedDecayExponent, (c, v) => c with { SpeedDecayExponent = v })
+                doubleParam(nameof(OsuDifficultyConstants.SpeedDecayExponent), c => c.SpeedDecayExponent, (c, v) => c with { SpeedDecayExponent = v }),
+                doubleParam(nameof(OsuDifficultyConstants.SpeedStrainDecayBurstBase), c => c.SpeedStrainDecayBurstBase, (c, v) => c with { SpeedStrainDecayBurstBase = v }),
+                doubleParam(nameof(OsuDifficultyConstants.SpeedStrainDecayStreamBase), c => c.SpeedStrainDecayStreamBase, (c, v) => c with { SpeedStrainDecayStreamBase = v }),
+                doubleParam(nameof(OsuDifficultyConstants.SpeedStrainDecayStreamExp), c => c.SpeedStrainDecayStreamExp, (c, v) => c with { SpeedStrainDecayStreamExp = v }),
+                doubleParam(nameof(OsuDifficultyConstants.SpeedBurstMultiplier), c => c.SpeedBurstMultiplier, (c, v) => c with { SpeedBurstMultiplier = v }),
+                doubleParam(nameof(OsuDifficultyConstants.SpeedStreamMultiplier), c => c.SpeedStreamMultiplier, (c, v) => c with { SpeedStreamMultiplier = v }),
+                doubleParam(nameof(OsuDifficultyConstants.SpeedStaminaMultiplier), c => c.SpeedStaminaMultiplier, (c, v) => c with { SpeedStaminaMultiplier = v }),
+                doubleParam(nameof(OsuDifficultyConstants.SpeedTotalMultiplier), c => c.SpeedTotalMultiplier, (c, v) => c with { SpeedTotalMultiplier = v }),
+                doubleParam(nameof(OsuDifficultyConstants.SpeedFControlNorm), c => c.SpeedFControlNorm, (c, v) => c with { SpeedFControlNorm = v }),
+                doubleParam(nameof(OsuDifficultyConstants.SpeedMeanExponent), c => c.SpeedMeanExponent, (c, v) => c with { SpeedMeanExponent = v })
             ),
             new DifficultyTuningSection<OsuDifficultyConstants>("Reading skill",
                 doubleParam(nameof(OsuDifficultyConstants.ReadingSkillMultiplier), c => c.ReadingSkillMultiplier, (c, v) => c with { ReadingSkillMultiplier = v }),
-                doubleParam(nameof(OsuDifficultyConstants.ReadingStrainDecayBase), c => c.ReadingStrainDecayBase, (c, v) => c with { ReadingStrainDecayBase = v })
+                doubleParam(nameof(OsuDifficultyConstants.ReadingStrainDecayBase), c => c.ReadingStrainDecayBase, (c, v) => c with { ReadingStrainDecayBase = v }),
+                doubleParam(nameof(OsuDifficultyConstants.ReadingReducedDifficultyBaseLine), c => c.ReadingReducedDifficultyBaseLine, (c, v) => c with { ReadingReducedDifficultyBaseLine = v }, defaultEnabled: false),
+                doubleParam(nameof(OsuDifficultyConstants.ReadingReducedDifficultyDuration), c => c.ReadingReducedDifficultyDuration, (c, v) => c with { ReadingReducedDifficultyDuration = v }, defaultEnabled: false)
             ),
             new DifficultyTuningSection<OsuDifficultyConstants>("Flashlight skill",
                 doubleParam(nameof(OsuDifficultyConstants.FlashlightSkillMultiplier), c => c.FlashlightSkillMultiplier, (c, v) => c with { FlashlightSkillMultiplier = v }, defaultEnabled: false),
@@ -47,13 +64,11 @@ namespace PerformanceCalculatorGUI.Configuration
                 doubleParam(nameof(OsuDifficultyConstants.SnapAimAcuteAngleScale), c => c.SnapAimAcuteAngleScale, (c, v) => c with { SnapAimAcuteAngleScale = v }),
                 doubleParam(nameof(OsuDifficultyConstants.SnapAimSliderScale), c => c.SnapAimSliderScale, (c, v) => c with { SnapAimSliderScale = v }),
                 doubleParam(nameof(OsuDifficultyConstants.SnapAimVelocityChangeScale), c => c.SnapAimVelocityChangeScale, (c, v) => c with { SnapAimVelocityChangeScale = v }),
-                doubleParam(nameof(OsuDifficultyConstants.SnapAimWiggleScale), c => c.SnapAimWiggleScale, (c, v) => c with { SnapAimWiggleScale = v }, defaultEnabled: false),
-                doubleParam(nameof(OsuDifficultyConstants.SnapAimHighBpmBonusBase), c => c.SnapAimHighBpmBonusBase, (c, v) => c with { SnapAimHighBpmBonusBase = v }),
-                doubleParam(nameof(OsuDifficultyConstants.SnapAimHighBpmExponent), c => c.SnapAimHighBpmExponent, (c, v) => c with { SnapAimHighBpmExponent = v }),
                 doubleParam(nameof(OsuDifficultyConstants.SnapAimMaxRepetitionNerf), c => c.SnapAimMaxRepetitionNerf, (c, v) => c with { SnapAimMaxRepetitionNerf = v }),
                 doubleParam(nameof(OsuDifficultyConstants.SnapAimMaxVectorInfluence), c => c.SnapAimMaxVectorInfluence, (c, v) => c with { SnapAimMaxVectorInfluence = v })
             ),
             new DifficultyTuningSection<OsuDifficultyConstants>("Agility bonuses",
+                doubleParam(nameof(OsuDifficultyConstants.AgilityWideAngleMultiplier), c => c.AgilityWideAngleMultiplier, (c, v) => c with { AgilityWideAngleMultiplier = v }),
                 doubleParam(nameof(OsuDifficultyConstants.AgilityHighBpmBonusBase), c => c.AgilityHighBpmBonusBase, (c, v) => c with { AgilityHighBpmBonusBase = v }),
                 doubleParam(nameof(OsuDifficultyConstants.AgilityHighBpmExponent), c => c.AgilityHighBpmExponent, (c, v) => c with { AgilityHighBpmExponent = v })
             ),
@@ -68,17 +83,10 @@ namespace PerformanceCalculatorGUI.Configuration
                 doubleParam(nameof(OsuDifficultyConstants.FlashlightMinAngleScale), c => c.FlashlightMinAngleScale, (c, v) => c with { FlashlightMinAngleScale = v }, defaultEnabled: false)
             ),
             new DifficultyTuningSection<OsuDifficultyConstants>("Rhythm tuning",
-                intParam(nameof(OsuDifficultyConstants.RhythmHistoryTimeMax), c => c.RhythmHistoryTimeMax, (c, v) => c with { RhythmHistoryTimeMax = v }, defaultEnabled: false),
-                intParam(nameof(OsuDifficultyConstants.RhythmHistoryObjectsMax), c => c.RhythmHistoryObjectsMax, (c, v) => c with { RhythmHistoryObjectsMax = v }, defaultEnabled: false),
-                doubleParam(nameof(OsuDifficultyConstants.RhythmOverallScale), c => c.RhythmOverallScale, (c, v) => c with { RhythmOverallScale = v }),
-                doubleParam(nameof(OsuDifficultyConstants.RhythmRatioScale), c => c.RhythmRatioScale, (c, v) => c with { RhythmRatioScale = v }),
-                doubleParam(nameof(OsuDifficultyConstants.RhythmSliderIntoNerf), c => c.RhythmSliderIntoNerf, (c, v) => c with { RhythmSliderIntoNerf = v }, defaultEnabled: false),
-                doubleParam(nameof(OsuDifficultyConstants.RhythmRepeatPolarityNerf), c => c.RhythmRepeatPolarityNerf, (c, v) => c with { RhythmRepeatPolarityNerf = v }, defaultEnabled: false),
-                doubleParam(nameof(OsuDifficultyConstants.RhythmSpeedupConsecutiveNerf), c => c.RhythmSpeedupConsecutiveNerf, (c, v) => c with { RhythmSpeedupConsecutiveNerf = v }, defaultEnabled: false),
-                doubleParam(nameof(OsuDifficultyConstants.RhythmRepeatIslandSizeNerf), c => c.RhythmRepeatIslandSizeNerf, (c, v) => c with { RhythmRepeatIslandSizeNerf = v }, defaultEnabled: false),
-                doubleParam(nameof(OsuDifficultyConstants.RhythmDoubletapScale), c => c.RhythmDoubletapScale, (c, v) => c with { RhythmDoubletapScale = v }, defaultEnabled: false),
-                doubleParam(nameof(OsuDifficultyConstants.RhythmSpeedupSliderIntoNerf), c => c.RhythmSpeedupSliderIntoNerf, (c, v) => c with { RhythmSpeedupSliderIntoNerf = v }, defaultEnabled: false),
-                doubleParam(nameof(OsuDifficultyConstants.RhythmSpeedupSliderFromNerf), c => c.RhythmSpeedupSliderFromNerf, (c, v) => c with { RhythmSpeedupSliderFromNerf = v }, defaultEnabled: false)
+                doubleParam(nameof(OsuDifficultyConstants.FingerControlJerkBalancingFactor), c => c.FingerControlJerkBalancingFactor, (c, v) => c with { FingerControlJerkBalancingFactor = v }),
+                doubleParam(nameof(OsuDifficultyConstants.FingerControlJerkTimeConstant), c => c.FingerControlJerkTimeConstant, (c, v) => c with { FingerControlJerkTimeConstant = v }, defaultEnabled: false),
+                doubleParam(nameof(OsuDifficultyConstants.FingerControlGallopMidpoint), c => c.FingerControlGallopMidpoint, (c, v) => c with { FingerControlGallopMidpoint = v }, defaultEnabled: false),
+                doubleParam(nameof(OsuDifficultyConstants.FingerControlCompressionExponent), c => c.FingerControlCompressionExponent, (c, v) => c with { FingerControlCompressionExponent = v }, defaultEnabled: false)
             ),
             new DifficultyTuningSection<OsuDifficultyConstants>("Reading tuning",
                 doubleParam(nameof(OsuDifficultyConstants.ReadingWindowSize), c => c.ReadingWindowSize, (c, v) => c with { ReadingWindowSize = v }, defaultEnabled: false),
@@ -95,9 +103,12 @@ namespace PerformanceCalculatorGUI.Configuration
             ),
             new DifficultyTuningSection<OsuDifficultyConstants>("Speed tuning",
                 doubleParam(nameof(OsuDifficultyConstants.SpeedMinBonusBpm), c => c.SpeedMinBonusBpm, (c, v) => c with { SpeedMinBonusBpm = v }),
-                doubleParam(nameof(OsuDifficultyConstants.SpeedBalancingFactor), c => c.SpeedBalancingFactor, (c, v) => c with { SpeedBalancingFactor = v }),
-                doubleParam(nameof(OsuDifficultyConstants.SpeedHighBpmBonusBase), c => c.SpeedHighBpmBonusBase, (c, v) => c with { SpeedHighBpmBonusBase = v }),
-                doubleParam(nameof(OsuDifficultyConstants.SpeedHighBpmExponent), c => c.SpeedHighBpmExponent, (c, v) => c with { SpeedHighBpmExponent = v })
+                doubleParam(nameof(OsuDifficultyConstants.SpeedBalancingFactor), c => c.SpeedBalancingFactor, (c, v) => c with { SpeedBalancingFactor = v })
+            ),
+            new DifficultyTuningSection<OsuDifficultyConstants>("Stamina tuning",
+                doubleParam(nameof(OsuDifficultyConstants.StaminaBaseBpm), c => c.StaminaBaseBpm, (c, v) => c with { StaminaBaseBpm = v }),
+                doubleParam(nameof(OsuDifficultyConstants.StaminaSpeedBalanceFactor), c => c.StaminaSpeedBalanceFactor, (c, v) => c with { StaminaSpeedBalanceFactor = v }),
+                doubleParam(nameof(OsuDifficultyConstants.StaminaSpeedExponent), c => c.StaminaSpeedExponent, (c, v) => c with { StaminaSpeedExponent = v })
             )
         };
 
