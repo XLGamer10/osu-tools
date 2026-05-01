@@ -1,6 +1,8 @@
 ﻿// Copyright (c) ppy Pty Ltd <contact@ppy.sh>. Licensed under the MIT Licence.
 // See the LICENCE file in the repository root for full licence text.
 
+using System.Collections.Generic;
+using System.Linq;
 using osu.Framework.Graphics;
 using osu.Framework.Graphics.Containers;
 using osu.Game.Graphics;
@@ -18,6 +20,29 @@ namespace PerformanceCalculatorGUI.Screens.ObjectInspection
         {
             this.label = label;
             this.value = value.ToString("N2");
+
+            createLayout();
+        }
+
+        public ObjectInspectorDifficultyValue(string label, IEnumerable<int> values)
+        {
+            this.label = label;
+            // Format as [1, 2, 3] or "None" if empty
+            var list = values.ToList();
+            this.value = list.Count > 0 ? $"[{string.Join(", ", list)}]" : "[]";
+
+            createLayout();
+        }
+
+        public ObjectInspectorDifficultyValue(string label, IEnumerable<double> values)
+        {
+            this.label = label;
+
+            var list = values.ToList();
+
+            value = list.Count > 0
+                ? $"[{string.Join(", ", list.Select(v => v.ToString("N2")))}]"
+                : "[]";
 
             createLayout();
         }

@@ -141,6 +141,13 @@ namespace PerformanceCalculatorGUI.Screens.ObjectInspection
                 new ObjectInspectorDifficultyValue("Lazy Jump Dist", hitObject.LazyJumpDistance),
                 new ObjectInspectorDifficultyValue("Min Jump Dist", hitObject.MinimumJumpDistance),
                 new ObjectInspectorDifficultyValue("Min Jump Time", hitObject.MinimumJumpTime),
+                new ObjectInspectorDifficultyValue("Rhythm Cluster Indices", hitObject.RhythmClusters.Select(c => c.Index)),
+                new ObjectInspectorDifficultyValue("Parity Surprisal", hitObject.RhythmClusters.Select(c => c.ParitySurprisal)),
+                new ObjectInspectorDifficultyValue("Gap Surprisal", hitObject.RhythmClusters.Select(c => c.GapSurprisal)),
+                new ObjectInspectorDifficultyValue("Internal Surprisal", hitObject.RhythmClusters.Select(c => c.InternalSurprisal)),
+                new ObjectInspectorDifficultyValue("Parity Cr-Entropy", hitObject.RhythmClusters.Select(c => c.ParityCrossEntropy)),
+                new ObjectInspectorDifficultyValue("Gap Cr-Entropy", hitObject.RhythmClusters.Select(c => c.GapCrossEntropy)),
+                new ObjectInspectorDifficultyValue("Internal Cr-Entropy", hitObject.RhythmClusters.Select(c => c.InternalCrossEntropy)),
 
                 new ObjectInspectorDifficultyValue("Snap Aim Difficulty", SnapAimEvaluator.EvaluateDifficultyOf(hitObject, true)),
                 new ObjectInspectorDifficultyValue("Snap Aim Difficulty (w/o sliders)", SnapAimEvaluator.EvaluateDifficultyOf(hitObject, false)),
@@ -148,7 +155,7 @@ namespace PerformanceCalculatorGUI.Screens.ObjectInspection
                 new ObjectInspectorDifficultyValue("Flow Aim Difficulty (w/o sliders)", FlowAimEvaluator.EvaluateDifficultyOf(hitObject, false)),
                 new ObjectInspectorDifficultyValue("Agility Difficulty", AgilityEvaluator.EvaluateDifficultyOf(hitObject)),
                 new ObjectInspectorDifficultyValue("Speed Difficulty", SpeedEvaluator.EvaluateDifficultyOf(hitObject)),
-                new ObjectInspectorDifficultyValue("Rhythm Difficulty", osu.Game.Rulesets.Osu.Difficulty.Evaluators.Speed.RhythmEvaluator.EvaluateDifficultyOf(hitObject)),
+                new ObjectInspectorDifficultyValue("Rhythm Difficulty", osu.Game.Rulesets.Osu.Difficulty.Evaluators.RhythmEvaluator.EvaluateDifficultyOf(hitObject)),
                 new ObjectInspectorDifficultyValue("Reading Difficulty", osu.Game.Rulesets.Osu.Difficulty.Evaluators.ReadingEvaluator.EvaluateDifficultyOf(hitObject, hidden)),
                 new ObjectInspectorDifficultyValue(hidden ? "FLHD Difficulty" : "Flashlight Diff", FlashlightEvaluator.EvaluateDifficultyOf(hitObject, appliedMods.Value)),
             });
