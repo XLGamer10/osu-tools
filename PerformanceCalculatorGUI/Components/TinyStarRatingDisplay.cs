@@ -14,7 +14,6 @@ using osu.Game.Overlays;
 using osu.Game.Rulesets.Difficulty;
 using osu.Game.Utils;
 using osuTK;
-using osuTK.Graphics;
 
 namespace PerformanceCalculatorGUI.Components
 {

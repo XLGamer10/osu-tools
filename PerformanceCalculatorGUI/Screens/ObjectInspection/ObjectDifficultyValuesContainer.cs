@@ -155,6 +155,7 @@ namespace PerformanceCalculatorGUI.Screens.ObjectInspection
                 new ObjectInspectorDifficultyValue("Flow Aim Difficulty (w/o sliders)", FlowAimEvaluator.EvaluateDifficultyOf(hitObject, false, true)),
                 new ObjectInspectorDifficultyValue("Agility Difficulty", AgilityEvaluator.EvaluateDifficultyOf(hitObject, true)),
                 new ObjectInspectorDifficultyValue("Speed Difficulty", SpeedEvaluator.EvaluateDifficultyOf(hitObject)),
+                new ObjectInspectorDifficultyValue("Finger Control Difficulty", FingerControlEvaluator.EvaluateDifficultyOf(hitObject)),
                 new ObjectInspectorDifficultyValue("Rhythm Difficulty", osu.Game.Rulesets.Osu.Difficulty.Evaluators.RhythmEvaluator.EvaluateDifficultyOf(hitObject)),
                 new ObjectInspectorDifficultyValue("Reading Difficulty", osu.Game.Rulesets.Osu.Difficulty.Evaluators.ReadingEvaluator.EvaluateDifficultyOf(hitObject, hidden)),
                 new ObjectInspectorDifficultyValue(hidden ? "FLHD Difficulty" : "Flashlight Diff", FlashlightEvaluator.EvaluateDifficultyOf(hitObject, appliedMods.Value)),
